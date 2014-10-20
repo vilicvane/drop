@@ -5,7 +5,7 @@
     var attributeDefinition = new DecoratorDefinition('attribute', null);
 
     attributeDefinition.onchange = (decorator, args) => {
-        decorator.target.nodes.forEach((target: Element) => {
+        decorator.target.each((target: Element) => {
             if (target.setAttribute) {
                 target.setAttribute(decorator.name, decorator.expressionValue);
             }
@@ -34,7 +34,6 @@
     textDefinition.onchange = (decorator, args) => {
         var textNode = document.createTextNode(decorator.expressionValue);
         decorator.target.replaceWith(textNode);
-
     };
 
     DecoratorDefinition.register(textDefinition);
@@ -109,11 +108,11 @@
         var value = processor.expressionValue;
         var idKeys = processor.expressionFullIdKeys;
 
-        processor.target.nodes.forEach((node: any) => {
-            node.value = value;
-            (<HTMLElement>node).addEventListener('change', onchange);
-            (<HTMLElement>node).addEventListener('input', onchange);
-            (<HTMLElement>node).addEventListener('paste', onchange);
+        processor.target.each(ele => {
+            (<any>ele).value = value;
+            (<HTMLElement>ele).addEventListener('change', onchange);
+            (<HTMLElement>ele).addEventListener('input', onchange);
+            (<HTMLElement>ele).addEventListener('paste', onchange);
         });
 
         processor.data = {
@@ -128,18 +127,18 @@
     bindValueDefinition.onchange = (processor, args) => {
         var value = processor.expressionValue;
 
-        processor.target.nodes.forEach((node: any) => {
-            node.value = value;
+        processor.target.each(ele => {
+            (<any>ele).value = value;
         });
     };
 
     bindValueDefinition.ondispose = processor => {
         var onchange = processor.data.onchange;
 
-        processor.target.nodes.forEach((node: any) => {
-            (<HTMLElement>node).removeEventListener('change', onchange);
-            (<HTMLElement>node).removeEventListener('input', onchange);
-            (<HTMLElement>node).removeEventListener('paste', onchange);
+        processor.target.each(ele => {
+            (<HTMLElement>ele).removeEventListener('change', onchange);
+            (<HTMLElement>ele).removeEventListener('input', onchange);
+            (<HTMLElement>ele).removeEventListener('paste', onchange);
         });
     };
 
@@ -151,18 +150,30 @@
 
     clickDefinition.onchange = (processor, args) => {
         var onclick = processor.expressionValue;
-        processor.target.nodes.forEach((ele: HTMLElement) => {
+        processor.target.each(ele => {
             ele.addEventListener('click', onclick);
         });
     };
 
     clickDefinition.ondispose = (processor) => {
         var onclick = processor.expressionValue;
-        processor.target.nodes.forEach((ele: HTMLElement) => {
+        processor.target.each(ele => {
             ele.removeEventListener('click', onclick);
         });
     };
 
     DecoratorDefinition.register(clickDefinition);
 
+    // %show
+
+    var showDefinition = new ProcessorDefinition('show');
+
+    showDefinition.onchange = (processor, args) => {
+        var value = processor.expressionValue;
+        processor.target.each(ele => {
+            ele.style.display = value ? '' : 'none';
+        });
+    };
+
+    DecoratorDefinition.register(showDefinition);
 }

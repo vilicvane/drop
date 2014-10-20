@@ -27,7 +27,7 @@
                         <div class="navbar-collapse collapse">
                             <ul class="nav navbar-nav">
                                 {#each navLinks}
-                                {%active active}
+                                {@class active ? "active" : ""}
                                 <li>
                                     {@href url}
                                     <a>{name}</a>
@@ -44,10 +44,10 @@
                     </div>
                 </div>
             </div>
-            
+
             {#scope intro}
             <div class="container">
-                <h2>{title}</h2>
+                <h2>{title.toUpperCase()}</h2>
                 {#each paragraphs}
                 <p>{this}</p>
                 <br />
@@ -64,31 +64,12 @@
         {#scope legalInfo}
         <div id="footer" class="text-center">
             {license} License<br />
-            ©{year} {author}
+            ©{new Date()
+            .getFullYear()} {author}
         </div>
     </script>
     <script src="../index.js"></script>
     <script>
-        /*
-            Now the expression support in Drop is too simple to handle daily usages,
-            but I will soon come to that.
-
-            So here we define a decorator to deal with the "active" class.
-        */
-        var activeProcessor = new Drop.ProcessorDefinition('active');
-
-        activeProcessor.onchange = function (processor, args) {
-            var value = processor.expressionValue;
-            processor.target.nodes.forEach(function (node) {
-                if (value) {
-                    node.classList.add('active');
-                } else {
-                    node.classList.remove('active');
-                }
-            });
-        };
-
-        Drop.DecoratorDefinition.register(activeProcessor);
 
         /*
             Soon I will add a data helper class (maybe DataHelper) to deal with data manipulation.
@@ -129,12 +110,11 @@
             },
             legalInfo: {
                 license: 'MIT',
-                year: new Date().getFullYear(),
                 author: 'VILIC VANE'
             }
         });
 
-        Drop.Template.apply('body-template', data, document.body);
+        var template = Drop.Template.apply('body-template', data, document.body);
 
     </script>
 </body>

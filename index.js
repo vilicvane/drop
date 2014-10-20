@@ -6,60 +6,36 @@
 };
 var Drop;
 (function (Drop) {
-    //#region Utils
+    'use strict';
+
+    
+
     var hop = Object.prototype.hasOwnProperty;
     var slice = Array.prototype.slice;
     var splice = Array.prototype.splice;
 
     var nextTick = (function () {
         // linked list of tasks (single, with head node)
-        var head = {};
+        var head = {
+            task: null,
+            next: null
+        };
         var tail = head;
         var flushing = false;
         var requestTick = null;
-        var isNodeJS = false;
 
         function flush() {
             while (head.next) {
                 head = head.next;
                 var task = head.task;
                 head.task = null;
-                var domain = head.domain;
-
-                if (domain) {
-                    head.domain = null;
-                    domain.enter();
-                }
 
                 try  {
                     task();
                 } catch (e) {
-                    if (isNodeJS) {
-                        // In node, uncaught exceptions are considered fatal errors.
-                        // Re-throw them synchronously to interrupt flushing!
-                        // Ensure continuation if the uncaught exception is suppressed
-                        // listening "uncaughtException" events (as domains does).
-                        // Continue in next event to avoid tick recursion.
-                        if (domain) {
-                            domain.exit();
-                        }
-                        setTimeout(flush, 0);
-                        if (domain) {
-                            domain.enter();
-                        }
-
+                    setTimeout(function () {
                         throw e;
-                    } else {
-                        // In browsers, uncaught exceptions are not fatal.
-                        // Re-throw them asynchronously to avoid slow-downs.
-                        setTimeout(function () {
-                            throw e;
-                        }, 0);
-                    }
-                }
-
-                if (domain) {
-                    domain.exit();
+                    }, 0);
                 }
             }
 
@@ -69,7 +45,6 @@ var Drop;
         var nextTick = function (task) {
             tail = tail.next = {
                 task: task,
-                domain: isNodeJS && process.domain,
                 next: null
             };
 
@@ -79,15 +54,7 @@ var Drop;
             }
         };
 
-        if (typeof process !== 'undefined' && process.nextTick) {
-            // Node.js before 0.9. Note that some fake-Node environments, like the
-            // Mocha test runner, introduce a `process` global without a `nextTick`.
-            isNodeJS = true;
-
-            requestTick = function () {
-                process.nextTick(flush);
-            };
-        } else if (typeof setImmediate === 'function') {
+        if (typeof setImmediate === 'function') {
             // In IE10, Node.js 0.9+, or https://github.com/NobleJS/setImmediate
             if (typeof window !== 'undefined') {
                 requestTick = setImmediate.bind(window, flush);
@@ -245,8 +212,7 @@ var Drop;
             this._onceEvents = new StringMap();
         }
         EventHost.prototype.on = function (type, listener) {
-            console.log('on("' + type + '")');
-
+            //console.log('on("' + type + '")');
             var listeners = this._events.get(type);
 
             if (!listeners) {
@@ -441,12 +407,14 @@ var Drop;
     })();
     Drop.XArray = XArray;
 
-    var preprocessRegex = /(<!--(?:(?!-->)[\s\S])*-->)|(\\\\|\\\{)|\{(?:([@#%])([\w-]+)\s+|(=)?)(?:((?:\\\\|\\\}|(?:(["'])(?:\\.|(?!\7).)*\7)|[^}])*))?\}/g;
+    var preprocessRegex = /(<!--(?:(?!-->)[\s\S])*-->)|(\\\\|\\\{)|\{(?:([@#%])([a-z](?:-?[\w]+)*)\s+|(=)?)(?:((?:\\\\|\\\}|(?:(["'])(?:\\.|(?!\7).)*\7)|[^}])*))?\}/ig;
     var numberRegex = /^:?\d+$/;
     var arrayIndexRegex = /\[(\d+)\]/g;
     var keyPathTailRegex = /(?:\[\d+\]|(?:\.|^)[^.]+)$/;
-    var expressionInStringRegex = /(\\\\|\\\{|\\\})|\{((?:\w+|:\d+)(?:\.(?:\w+|:\d+)|\[\d+\])*)\}/g;
-    var expressionRegex = /^(?:\w+|:\d+)(?:\.(?:\w+|:\d+)|\[\d+\])*$/;
+    var expressionInStringRegex = /(\\\\|\\\{|\\\})|\{((?:[a-z$_][\w$]*|:\d+)(?:\.(?:[a-z$_][\w$]*|:\d+)|\[\d+\])*)\}/ig;
+    var expressionRegex = /^(?:\w+|:\d+)(?:\.(?:[a-z$_][\w$]*|:\d+)|\[\d+\])*$/i;
+    var expressionInCompoundRegex = /((["'])(?:\\.|(?!\2).)*\2|true|false|null|new)|(?:^|[^.\[\]a-zA-Z$_])((?:[a-zA-Z$_][\w$]*|:\d+)(?![\w$\(])(?:(?:\s*\.\s*(?:[a-zA-Z$_][\w$]*|:\d+)|\[\d+\])(?![\w$]|\s*\())*)/g;
+    var expressionInParsedCompoundRegex = /((["'])(?:\\.|(?!\2).)*\2)|\{((?:[a-z$_][\w$]*|:\d+)(?:\.(?:[a-z$_][\w$]*|:\d+)|\[\d+\])*)\}/ig;
     var escapedRegex = /\\(\\|\{|\})/g;
 
     (function (DataChangeType) {
@@ -458,7 +426,7 @@ var Drop;
     var DataChangeType = Drop.DataChangeType;
 
     function expressionToKeys(expression) {
-        return expression.replace(arrayIndexRegex, '.$1').split('.');
+        return expression.replace(/\s+/g, '').replace(arrayIndexRegex, '.$1').split('.');
     }
 
     function removePreThis(keys) {
@@ -477,48 +445,8 @@ var Drop;
             return Data._getIdKeysInfo(this._data, keys);
         };
 
-        //getFullKeys(keysGroups: string[][]): string[] {
-        //    keysGroups = keysGroups.concat();
-        //    for (var i = 0; i < keysGroups.length; i++) {
-        //        var keys = keysGroups[i];
-        //        if (keys[0] == 'this') {
-        //            keys.shift();
-        //            if (!keys.length) {
-        //                keysGroups.splice(i--, 1);
-        //            }
-        //        }
-        //    }
-        //    var scopeKeysGroups: string[][] = [];
-        //    var scope = this._data;
-        //    var scopes = [scope];
-        //    var subScope;
-        //    keysLoop:
-        //    for (var i = 0; i < keysGroups.length; i++) {
-        //        var keys = keysGroups[i];
-        //        var key = keys[0];
-        //        for (var j = scopes.length - 1; j >= 0; j--) {
-        //            var scope = scopes[j];
-        //            if (Data._existsKey(scope, key)) {
-        //                var idKeysInfo = Data._getIdKeysInfo(scope, keys);
-        //                subScope = idKeysInfo.value;
-        //                if (i == keysGroups.length - 1) {
-        //                    scopeKeysGroups.push(idKeysInfo.keys);
-        //                } else if (subScope != null) {
-        //                    scopes.push(subScope);
-        //                    scopeKeysGroups.push(idKeysInfo.keys);
-        //                }
-        //                continue keysLoop;
-        //            }
-        //            scopes.pop();
-        //            scopeKeysGroups.pop();
-        //        }
-        //        return null;
-        //    }
-        //    var fullKeys = scopeKeysGroups.reduce((prev, curr) => prev.concat(curr), []);
-        //    return fullKeys;
-        //}
         Data.prototype.get = function (keys) {
-            return Data._unwrap(Data._get(this._data, keys));
+            return Data._unwrap(Data._get(this._data, keys, true));
         };
 
         Data.prototype.existsKeyInScope = function (scopeKeys, key) {
@@ -585,7 +513,7 @@ var Drop;
 
                 if (data == null) {
                     return {
-                        keys: idKeys.concat(keys.slice(i + 1)),
+                        keys: i == 0 ? null : idKeys.concat(keys.slice(i + 1)),
                         value: undefined
                     };
                 }
@@ -627,9 +555,25 @@ var Drop;
             };
         };
 
-        Data._get = function (data, keys) {
-            var key;
+        Data._get = function (data, keys, getInGlobal) {
+            if (typeof getInGlobal === "undefined") { getInGlobal = false; }
+            var key = keys[0];
             var i = 0;
+
+            if (getInGlobal && ((data instanceof XArray && key != 'length') || !(key in data))) {
+                data = window;
+                for (i; i < keys.length - 1; i++) {
+                    var key = keys[i];
+                    data = data[key];
+
+                    if (data == null) {
+                        return undefined;
+                    }
+                }
+
+                key = keys[i];
+                return data[key];
+            }
 
             for (i; i < keys.length - 1; i++) {
                 key = keys[i];
@@ -958,6 +902,14 @@ var Drop;
         };
         DecoratorDefinition._modifiersMap = new StringMap();
         DecoratorDefinition._processorsMap = new StringMap();
+
+        DecoratorDefinition.typeToMark = {
+            'modifier': '#',
+            'processor': '%',
+            'attribute': '@',
+            'html': '=',
+            'text': ''
+        };
         return DecoratorDefinition;
     })();
     Drop.DecoratorDefinition = DecoratorDefinition;
@@ -1001,16 +953,29 @@ var Drop;
         function DecoratorTarget(nodes) {
             if (typeof nodes === "undefined") { nodes = []; }
             this.nodes = nodes;
+            this._comment = document.createComment('decorator target');
         }
+        DecoratorTarget.prototype.each = function (handler) {
+            this.nodes.forEach(function (node, index) {
+                return handler(node, index);
+            });
+        };
+
         DecoratorTarget.prototype.replaceWith = function (nodes) {
             var prevNodes = this.nodes;
 
-            for (var i = 1; i < prevNodes.length; i++) {
-                var node = prevNodes[i];
-                node.parentNode.removeChild(node);
-            }
+            var replaceTarget;
 
-            var replaceTarget = prevNodes[0];
+            if (prevNodes.length) {
+                for (var i = 1; i < prevNodes.length; i++) {
+                    var node = prevNodes[i];
+                    node.parentNode.removeChild(node);
+                }
+
+                replaceTarget = prevNodes[0];
+            } else {
+                replaceTarget = this._comment;
+            }
 
             var fragment;
 
@@ -1019,15 +984,19 @@ var Drop;
                 fragment = nodes;
             } else {
                 if (!(nodes instanceof Array || nodes instanceof NodeList)) {
-                    nodes = [nodes];
+                    nodes = nodes ? [nodes] : [];
                 }
 
                 fragment = document.createDocumentFragment();
 
                 this.nodes = slice.call(nodes);
-                this.nodes.forEach(function (node) {
+                this.each(function (node) {
                     fragment.appendChild(node);
                 });
+            }
+
+            if (!this.nodes.length) {
+                fragment = this._comment;
             }
 
             replaceTarget.parentNode.replaceChild(fragment, replaceTarget);
@@ -1047,18 +1016,23 @@ var Drop;
             this._prepared = false;
             this.definition = DecoratorDefinition.getDefinition(type, name);
 
+            if (!this.definition) {
+                throw new TypeError('[drop] unknown decorator "' + DecoratorDefinition.typeToMark[type] + name + '" (' + type + ')');
+            }
+
             this._expression = expression;
 
             try  {
                 this._value = JSON.parse(expression);
                 this._isValue = true;
             } catch (e) {
-                if (!expressionRegex.test(expression)) {
-                    throw new SyntaxError('[drop] invalid decorator expression "' + expression + '"');
-                }
-                var expKeys = expressionToKeys(this._expression);
-                this._expressionKeys = expKeys;
                 this._isValue = false;
+                if (expressionRegex.test(expression)) {
+                    var expKeys = expressionToKeys(this._expression);
+                    this._expressionKeys = expKeys;
+                } else {
+                    this._isCompound = true;
+                }
             }
 
             if (scope) {
@@ -1106,26 +1080,41 @@ var Drop;
                 var value = this._value;
 
                 if (typeof value == 'string') {
-                    var info = this._getStringDependenciesInfo(value);
-                    this._value = info.stringWithFullKeys;
+                    var sInfo = this._getStringDependenciesInfo(value);
+                    this._value = sInfo.stringWithFullKeys;
 
                     //console.log(this._value);
-                    dependencies = info.dependencies;
+                    dependencies = sInfo.dependencies;
                 } else {
                     dependencies = [];
+                }
+            } else if (this._isCompound) {
+                var eInfo = this._getExpressionDependenciesInfo(this._expression);
+                this._compoundExpression = eInfo.expressionWithFullKeys;
+                dependencies = eInfo.dependencies;
+
+                if (!dependencies.length) {
+                    this._isValue = true;
+                    this._value = eval('(' + this._expression + ')');
                 }
             } else {
                 var expKeys = this._expressionKeys.concat();
 
                 removePreThis(expKeys);
 
-                var fullIdKeys = scope.getFullIdKeys(expKeys);
-                this._expressionFullIdKeys = fullIdKeys;
-
                 dependencies = [];
 
-                for (var i = 0; i < expKeys.length; i++) {
-                    dependencies.push(fullIdKeys.slice(0, fullIdKeys.length - i).join('.'));
+                var fullIdKeys = scope.getFullIdKeys(expKeys);
+
+                if (fullIdKeys) {
+                    this._expressionFullIdKeys = fullIdKeys;
+
+                    for (var i = 0; i < expKeys.length; i++) {
+                        dependencies.push(fullIdKeys.slice(0, fullIdKeys.length - i).join('.'));
+                    }
+                } else {
+                    this._isValue = true;
+                    this._value = eval('(' + this._expression + ')');
                 }
             }
 
@@ -1202,6 +1191,8 @@ var Drop;
                     } else {
                         return value;
                     }
+                } else if (this._isCompound) {
+                    return this.scope.evaluateExpression(this._compoundExpression);
                 } else {
                     return this.scope.evaluate(this._expressionFullIdKeys, true);
                 }
@@ -1219,24 +1210,61 @@ var Drop;
                     return m;
                 }
 
-                var fullExpression;
+                var keys = expressionToKeys(expression);
+                removePreThis(keys);
 
-                var dependency = expression.replace(arrayIndexRegex, '.$1');
-                var keys = dependency.split('.');
                 var fullIdKeys = scope.getFullIdKeys(keys);
 
-                fullExpression = fullIdKeys.join('.');
+                if (fullIdKeys) {
+                    var fullExpression = fullIdKeys.join('.');
 
-                for (var i = 0; i < keys.length; i++) {
-                    hash.set(fullIdKeys.slice(0, fullIdKeys.length - i).join('.'));
+                    for (var i = 0; i < keys.length; i++) {
+                        hash.set(fullIdKeys.slice(0, fullIdKeys.length - i).join('.'));
+                    }
+
+                    return '{' + fullExpression + '}';
+                } else {
+                    return eval('(' + expression + ')');
                 }
-
-                return '{' + fullExpression + '}';
             });
 
             return {
                 dependencies: hash.keys,
                 stringWithFullKeys: str
+            };
+        };
+
+        Decorator.prototype._getExpressionDependenciesInfo = function (expression) {
+            var hash = new StringHash();
+            var scope = this.scope;
+
+            expression = expression.replace(expressionInCompoundRegex, function (m, expToSkip, extra, expression) {
+                if (expToSkip) {
+                    return m;
+                }
+
+                var keys = expressionToKeys(expression);
+                removePreThis(keys);
+
+                var fullIdKeys = scope.getFullIdKeys(keys);
+
+                if (fullIdKeys) {
+                    var fullExpression = fullIdKeys.join('.');
+
+                    for (var i = 0; i < keys.length; i++) {
+                        hash.set(fullIdKeys.slice(0, fullIdKeys.length - i).join('.'));
+                    }
+
+                    return (extra || '') + '{' + fullExpression + '}';
+                } else {
+                    // global scope
+                    return m;
+                }
+            });
+
+            return {
+                dependencies: hash.keys,
+                expressionWithFullKeys: expression
             };
         };
         return Decorator;
@@ -1531,6 +1559,20 @@ var Drop;
             });
         };
 
+        Scope.prototype.evaluateExpression = function (expression, isFullKeys) {
+            var _this = this;
+            if (typeof isFullKeys === "undefined") { isFullKeys = false; }
+            expression = expression.replace(expressionInParsedCompoundRegex, function (m, stringToSkip, quotePlaceHolder, expression) {
+                if (stringToSkip) {
+                    return stringToSkip;
+                }
+                var value = _this.evaluate(expressionToKeys(expression), isFullKeys);
+                return JSON.stringify(value) || 'undefined';
+            });
+
+            return eval('(' + expression + ')');
+        };
+
         Scope.prototype.dispose = function (skipModifier) {
             if (typeof skipModifier === "undefined") { skipModifier = false; }
             if (!skipModifier) {
@@ -1578,6 +1620,7 @@ var Drop;
             var templateText = document.getElementById(templateId).textContent;
             var template = new Drop.Template(templateText, data);
             template.appendTo(target);
+            return template;
         };
 
         Template.parse = function (tpl) {
@@ -1632,7 +1675,7 @@ var Drop;
     var attributeDefinition = new Drop.DecoratorDefinition('attribute', null);
 
     attributeDefinition.onchange = function (decorator, args) {
-        decorator.target.nodes.forEach(function (target) {
+        decorator.target.each(function (target) {
             if (target.setAttribute) {
                 target.setAttribute(decorator.name, decorator.expressionValue);
             }
@@ -1725,11 +1768,11 @@ var Drop;
         var value = processor.expressionValue;
         var idKeys = processor.expressionFullIdKeys;
 
-        processor.target.nodes.forEach(function (node) {
-            node.value = value;
-            node.addEventListener('change', onchange);
-            node.addEventListener('input', onchange);
-            node.addEventListener('paste', onchange);
+        processor.target.each(function (ele) {
+            ele.value = value;
+            ele.addEventListener('change', onchange);
+            ele.addEventListener('input', onchange);
+            ele.addEventListener('paste', onchange);
         });
 
         processor.data = {
@@ -1744,18 +1787,18 @@ var Drop;
     bindValueDefinition.onchange = function (processor, args) {
         var value = processor.expressionValue;
 
-        processor.target.nodes.forEach(function (node) {
-            node.value = value;
+        processor.target.each(function (ele) {
+            ele.value = value;
         });
     };
 
     bindValueDefinition.ondispose = function (processor) {
         var onchange = processor.data.onchange;
 
-        processor.target.nodes.forEach(function (node) {
-            node.removeEventListener('change', onchange);
-            node.removeEventListener('input', onchange);
-            node.removeEventListener('paste', onchange);
+        processor.target.each(function (ele) {
+            ele.removeEventListener('change', onchange);
+            ele.removeEventListener('input', onchange);
+            ele.removeEventListener('paste', onchange);
         });
     };
 
@@ -1766,19 +1809,31 @@ var Drop;
 
     clickDefinition.onchange = function (processor, args) {
         var onclick = processor.expressionValue;
-        processor.target.nodes.forEach(function (ele) {
+        processor.target.each(function (ele) {
             ele.addEventListener('click', onclick);
         });
     };
 
     clickDefinition.ondispose = function (processor) {
         var onclick = processor.expressionValue;
-        processor.target.nodes.forEach(function (ele) {
+        processor.target.each(function (ele) {
             ele.removeEventListener('click', onclick);
         });
     };
 
     Drop.DecoratorDefinition.register(clickDefinition);
+
+    // %show
+    var showDefinition = new Drop.ProcessorDefinition('show');
+
+    showDefinition.onchange = function (processor, args) {
+        var value = processor.expressionValue;
+        processor.target.each(function (ele) {
+            ele.style.display = value ? '' : 'none';
+        });
+    };
+
+    Drop.DecoratorDefinition.register(showDefinition);
 })(Drop || (Drop = {}));
 /// <reference path="lib/drop.ts" />
 /// <reference path="lib/decorators.ts" />

@@ -63,7 +63,7 @@ declare module Drop {
         public existsKeyInScope(scopeKeys: string[], key: string): boolean;
         private static _existsKey(data, key);
         private static _getIdKeysInfo(data, keys);
-        private static _get<Value>(data, keys);
+        private static _get<Value>(data, keys, getInGlobal?);
         public set(keys: string[], value: any): void;
         private static _wrap(data);
         private static _unwrap(data);
@@ -86,6 +86,7 @@ declare module Drop {
         public dispose(decorator: Decorator): void;
         static register(decorator: DecoratorDefinition): void;
         static getDefinition(type: string, name?: string): DecoratorDefinition;
+        static typeToMark: IDictionary<string>;
     }
     class ModifierDefinition extends DecoratorDefinition {
         public oninitialize: (decorator: Decorator) => void;
@@ -102,6 +103,8 @@ declare module Drop {
     class DecoratorTarget {
         public nodes: Node[];
         constructor(nodes?: Node[]);
+        private _comment;
+        public each(handler: (node: HTMLElement, index: number) => void): void;
         public replaceWith(nodes: DocumentFragment): any;
         public replaceWith(nodes: Node): any;
         public replaceWith(nodes: NodeList): any;
@@ -117,6 +120,8 @@ declare module Drop {
         public data: any;
         private _value;
         private _isValue;
+        private _compoundExpression;
+        private _isCompound;
         private _expression;
         public expression : string;
         private _expressionKeys;
@@ -134,6 +139,7 @@ declare module Drop {
         public dispose(): void;
         public expressionValue : any;
         private _getStringDependenciesInfo(str);
+        private _getExpressionDependenciesInfo(expression);
     }
     class Scope extends EventHost {
         public fragmentTemplate: HTMLDivElement;
@@ -154,6 +160,7 @@ declare module Drop {
         public getFullIdKeys(keys: string[]): string[];
         public evaluate(keys: string[], isFullKeys?: boolean): any;
         public evaluateString(str: string, isFullKeys?: boolean): string;
+        public evaluateExpression(expression: string, isFullKeys?: boolean): any;
         public dispose(skipModifier?: boolean): void;
     }
     class Template {
@@ -162,7 +169,7 @@ declare module Drop {
         constructor(tpl: string, data: Data);
         public appendTo(node: Node): void;
         private static _htmlEncode(text);
-        static apply(templateId: string, data: Data, target: HTMLElement): void;
+        static apply(templateId: string, data: Data, target: HTMLElement): Template;
         static parse(tpl: string): HTMLDivElement;
     }
 }
