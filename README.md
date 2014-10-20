@@ -1,6 +1,6 @@
 ﻿# DropJS
 
-**Note** Drop is now under developing.
+**Note** Drop is now under development.
 
 Just another sibling to Angular and Ember.
 
