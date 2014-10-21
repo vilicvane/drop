@@ -4,9 +4,11 @@
     __.prototype = b.prototype;
     d.prototype = new __();
 };
+'use strict';
+
 var Drop;
 (function (Drop) {
-    'use strict';
+    Drop.globalEval = eval;
 
     
 
@@ -93,6 +95,12 @@ var Drop;
 
         return nextTick;
     })();
+
+    function errorNextTick(e) {
+        setTimeout(function () {
+            throw e;
+        }, 0);
+    }
 
     var StringHash = (function () {
         function StringHash() {
@@ -430,7 +438,7 @@ var Drop;
     //        invalidCharsRegex.source
     //    ].join('|'), 'g');
     //#endregion
-    var preprocessRegex = /(<!--(?:(?!-->)[\s\S])*-->)|(\\\\|\\\{)|\{(?:([@#%])([a-z](?:-?[\w]+)*)\s+|(=)?)(?:((?:\\\\|\\\}|(["'])(?:(?!\7|[\r\n\u2028\u2029\\])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:[\r\n\u2028\u2029]|\r\n))*\7|[^}])*))?\}/ig;
+    var preprocessRegex = /(<!--(?:(?!-->)[\s\S])*-->)|(\\\\|\\\{)|\{(?:([@#%])([a-z](?:-?[\w]+)*)\s+|(=)?)(?:((?:\\\\|\\\}|(["'])(?:(?!\7|[\r\n\u2028\u2029\\])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:[\r\n\u2028\u2029]|\r\n))*\7|(?:\/(?:[^\r\n\u2028\u2029*/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])(?:[^\r\n\u2028\u2029/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])*\/[gimy]{0,4})|[^}])*))?\}/ig;
     var indexOrIdRegex = /^:?\d+$/;
     var keyPathTailRegex = /(?:\.|^)[^.]+$/;
 
@@ -571,9 +579,14 @@ var Drop;
                     idKeys.push(':' + id);
                     value = data.itemById(id);
                 }
-            } else {
+            } else if (hop.call(data, key)) {
                 idKeys.push(key);
                 value = data[key];
+            } else {
+                return {
+                    keys: null,
+                    value: undefined
+                };
             }
 
             return {
@@ -855,16 +868,25 @@ var Drop;
                 decorator.scope.dispose(true);
             }
 
-            if (this.oninitialize) {
-                this.oninitialize(decorator);
-            } else {
-                this.onchange(decorator, null);
+            try  {
+                if (this.oninitialize) {
+                    this.oninitialize(decorator);
+                } else {
+                    this.onchange(decorator, null);
+                }
+            } catch (e) {
+                errorNextTick(e);
             }
+
             decorator.initialized = true;
         };
 
         DecoratorDefinition.prototype.change = function (decorator, args) {
-            this.onchange(decorator, args);
+            try  {
+                this.onchange(decorator, args);
+            } catch (e) {
+                errorNextTick(e);
+            }
         };
 
         DecoratorDefinition.prototype.invoke = function (decorator, args) {
@@ -876,12 +898,20 @@ var Drop;
         };
 
         DecoratorDefinition.prototype.dispose = function (decorator) {
-            if (this.ondispose) {
-                this.ondispose(decorator);
+            try  {
+                if (this.ondispose) {
+                    this.ondispose(decorator);
+                }
+            } catch (e) {
+                errorNextTick(e);
             }
         };
 
         DecoratorDefinition.register = function (decorator) {
+            if (!decorator.onchange) {
+                throw new TypeError('[drop] the onchange handler is required for a decorator');
+            }
+
             switch (decorator.type) {
                 case 'modifier':
                     DecoratorDefinition._modifiersMap.set(decorator.name, decorator);
@@ -1083,6 +1113,14 @@ var Drop;
             configurable: true
         });
 
+        Object.defineProperty(Decorator.prototype, "hasDependency", {
+            get: function () {
+                return !!(this._scopeListenerTypes.length || this._listenerTypes.length);
+            },
+            enumerable: true,
+            configurable: true
+        });
+
         Decorator.prototype.prepareDependencies = function () {
             var _this = this;
             if (this._prepared) {
@@ -1113,7 +1151,7 @@ var Drop;
 
                 var value;
                 try  {
-                    value = eval('(' + expression + ')');
+                    value = Drop.globalEval('"use strict";(' + expression + ')');
                 } catch (e) {
                     if (e instanceof SyntaxError) {
                         throw new Error('[drop] expression syntax error: ' + e.message);
@@ -1149,7 +1187,7 @@ var Drop;
                     this._isValue = true;
 
                     try  {
-                        this._value = eval('(' + this._expression + ')');
+                        this._value = Drop.globalEval('"use strict";(' + this._expression + ')');
                     } catch (e) {
                     }
                 }
@@ -1243,7 +1281,7 @@ var Drop;
                 if (this._isValue) {
                     var value = this._value;
                     if (typeof value == 'string') {
-                        if (this._listenerTypes.length) {
+                        if (this._listenerTypes.length || this._scopeListenerTypes.length) {
                             return this.scope.evaluateString(value, true);
                         } else {
                             return value.replace(escapedRegex, '$1');
@@ -1290,7 +1328,11 @@ var Drop;
 
                     return '{' + fullExpression + '}';
                 } else {
-                    return eval('(' + expression + ')');
+                    try  {
+                        return Drop.globalEval('"use strict";(' + expression + ')');
+                    } catch (e) {
+                        return '';
+                    }
                 }
             });
 
@@ -1497,8 +1539,10 @@ var Drop;
 
                         dropEle.parentNode.removeChild(dropEle);
 
-                        decorators.push(new Decorator(decoratorTarget, type, dropEle.getAttribute('name'), this, dropEle.textContent));
+                        var decorator = new Decorator(decoratorTarget, type, dropEle.getAttribute('name'), this, dropEle.textContent);
 
+                        decorator.invoke(null);
+                        decorators.push(decorator);
                         break;
                 }
             }
@@ -1506,10 +1550,6 @@ var Drop;
             this._fragmentDiv = fragmentDiv;
 
             this.decorators = decorators;
-
-            decorators.forEach(function (decorator) {
-                decorator.invoke(null);
-            });
         };
 
         Object.defineProperty(Scope.prototype, "fullScopeKeys", {
@@ -1577,10 +1617,8 @@ var Drop;
             var hasPreThis = removePreThis(keys);
             var key = keys[0];
 
-            var scopeData = this._scopeData;
-
             if (keys.length == 1) {
-                if (hop.call(scopeData, key)) {
+                if (hop.call(this._scopeData, key)) {
                     return ['this', key];
                 }
             }
@@ -1702,8 +1740,11 @@ var Drop;
                 return json;
             });
 
-            //console.log('eval:', expression);
-            return eval('(' + expression + ')');
+            try  {
+                return Drop.globalEval('"use strict";(' + expression + ')');
+            } catch (e) {
+                return undefined;
+            }
         };
 
         Scope.prototype.dispose = function (skipModifier) {
@@ -1947,6 +1988,42 @@ var Drop;
 
     Drop.DecoratorDefinition.register(bindValueDefinition);
 
+    // %var
+    var varDefinition = new Drop.ProcessorDefinition('var');
+
+    varDefinition.oninitialize = function (processor) {
+        var expression = processor.expression;
+
+        var index = expression.indexOf('=');
+
+        var name;
+        var value;
+
+        if (index < 0) {
+            name = expression.trim();
+        } else {
+            name = expression.substr(0, index).trim();
+
+            var valueExpression = expression.substr(index + 1).trim();
+            try  {
+                value = Drop.globalEval(valueExpression);
+            } catch (e) {
+                throw new e.construcotr('[drop %var] can not initialize the value of ' + name + ': ' + e.message);
+            }
+        }
+
+        if (!/^[a-z$_][\w$]*$/i.test(name)) {
+            throw new SyntaxError('[drop %var] invalid variable name "' + name + '"');
+        }
+
+        processor.scope.setScopeData(name, value);
+    };
+
+    varDefinition.onchange = function (processor, args) {
+    };
+
+    Drop.DecoratorDefinition.register(varDefinition);
+
     // %click
     var clickDefinition = new Drop.ProcessorDefinition('click');
 
@@ -1965,6 +2042,44 @@ var Drop;
     };
 
     Drop.DecoratorDefinition.register(clickDefinition);
+
+    // %click-toggle
+    var clickToggleDefinition = new Drop.ProcessorDefinition('click-toggle');
+
+    clickToggleDefinition.oninitialize = function (processor) {
+        var fullIdKeys = processor.expressionFullIdKeys;
+
+        if (!fullIdKeys) {
+            throw new TypeError('[drop %click-toggle] expression "' + processor.expression + '" is not valid for toggle');
+        }
+
+        processor.data = {
+            onclick: function () {
+                var value = !processor.expressionValue;
+                if (fullIdKeys[0] == 'this') {
+                    processor.scope.setScopeData(fullIdKeys[1], value);
+                } else {
+                    processor.scope.data.set(fullIdKeys, value);
+                }
+            }
+        };
+
+        processor.target.each(function (ele) {
+            ele.addEventListener('click', processor.data.onclick);
+        });
+    };
+
+    clickToggleDefinition.onchange = function (processor, args) {
+    };
+
+    clickToggleDefinition.ondispose = function (processor) {
+        var onclick = processor.data.onclick;
+        processor.target.each(function (ele) {
+            ele.removeEventListener('click', onclick);
+        });
+    };
+
+    Drop.DecoratorDefinition.register(clickToggleDefinition);
 
     // %show
     var showDefinition = new Drop.ProcessorDefinition('show');

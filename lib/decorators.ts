@@ -154,6 +154,41 @@
 
     DecoratorDefinition.register(bindValueDefinition);
 
+    // %var
+    var varDefinition = new ProcessorDefinition('var');
+
+    varDefinition.oninitialize = (processor) => {
+        var expression = processor.expression;
+
+        var index = expression.indexOf('=');
+
+        var name: string;
+        var value: any;
+        
+        if (index < 0) {
+            name = expression.trim();
+        } else {
+            name = expression.substr(0, index).trim();
+
+            var valueExpression = expression.substr(index + 1).trim();
+            try {
+                value = globalEval(valueExpression);
+            } catch (e) {
+                throw new e.construcotr('[drop %var] can not initialize the value of ' + name + ': ' + e.message);
+            }
+        }
+
+        if (!/^[a-z$_][\w$]*$/i.test(name)) {
+            throw new SyntaxError('[drop %var] invalid variable name "' + name + '"');
+        }
+
+        processor.scope.setScopeData(name, value);
+    };
+
+    varDefinition.onchange = (processor, args) => { };
+
+    DecoratorDefinition.register(varDefinition);
+
     // %click
 
     var clickDefinition = new ProcessorDefinition('click');
@@ -173,6 +208,44 @@
     };
 
     DecoratorDefinition.register(clickDefinition);
+
+    // %click-toggle
+
+    var clickToggleDefinition = new ProcessorDefinition('click-toggle');
+
+    clickToggleDefinition.oninitialize = (processor) => {
+        var fullIdKeys = processor.expressionFullIdKeys;
+
+        if (!fullIdKeys) {
+            throw new TypeError('[drop %click-toggle] expression "' + processor.expression + '" is not valid for toggle');
+        }
+
+        processor.data = {
+            onclick: () => {
+                var value = !processor.expressionValue;
+                if (fullIdKeys[0] == 'this') {
+                    processor.scope.setScopeData(fullIdKeys[1], value);
+                } else {
+                    processor.scope.data.set(fullIdKeys, value);
+                }
+            }
+        };
+
+        processor.target.each(ele => {
+            ele.addEventListener('click', processor.data.onclick);
+        });
+    };
+
+    clickToggleDefinition.onchange = (processor, args) => { };
+
+    clickToggleDefinition.ondispose = (processor) => {
+        var onclick = processor.data.onclick;
+        processor.target.each(ele => {
+            ele.removeEventListener('click', onclick);
+        });
+    };
+
+    DecoratorDefinition.register(clickToggleDefinition);
 
     // %show
 

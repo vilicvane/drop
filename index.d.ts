@@ -4,6 +4,7 @@ interface Element {
     getElementsByTagName(name: 'drop'): NodeListOf<DropElement>;
 }
 declare module Drop {
+    var globalEval: typeof eval;
     interface IEventListener<T> {
         (event: IEventData): T;
     }
@@ -131,6 +132,7 @@ declare module Drop {
         private _scopeListenerTypes;
         private _listenerTypes;
         private _listener;
+        public hasDependency : boolean;
         constructor(target: DecoratorTarget, type: string, name: string, scope: Scope, expression: string);
         private _prepared;
         public prepareDependencies(): void;
