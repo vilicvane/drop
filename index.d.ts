@@ -128,6 +128,7 @@ declare module Drop {
         public expressionKeys : string[];
         private _expressionFullIdKeys;
         public expressionFullIdKeys : string[];
+        private _scopeListenerTypes;
         private _listenerTypes;
         private _listener;
         constructor(target: DecoratorTarget, type: string, name: string, scope: Scope, expression: string);
@@ -139,24 +140,26 @@ declare module Drop {
         public dispose(): void;
         public expressionValue : any;
         private _getStringDependenciesInfo(str);
-        private _getExpressionDependenciesInfo(expression);
+        private _getExpressionDependenciesInfo(compoundExpression);
     }
     class Scope extends EventHost {
         public fragmentTemplate: HTMLDivElement;
         public modifier: Decorator;
         public parentScope: Scope;
+        private _scopeData;
         private _data;
         public data : Data;
         public childScopes: Scope[];
         public decorators: Decorator[];
         private _fragmentDiv;
         public fragment : DocumentFragment;
-        constructor(fragmentTemplate: HTMLDivElement, modifier: Decorator, parentScope: Scope, data?: Data, scopeKeys?: string[]);
+        constructor(fragmentTemplate: HTMLDivElement, modifier: Decorator, parentScope: Scope, data?: Data, scopeKeys?: string[], scopeData?: {});
         public initialize(): void;
         private _fullScopeKeysSet;
         private _fullScopeKeys;
         public fullScopeKeys : string[];
         private _setFullScopeKeys(scopeKeys?);
+        public setScopeData(key: string, value: any): void;
         public getFullIdKeys(keys: string[]): string[];
         public evaluate(keys: string[], isFullKeys?: boolean): any;
         public evaluateString(str: string, isFullKeys?: boolean): string;

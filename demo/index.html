@@ -49,7 +49,9 @@
             <div class="container">
                 <h2>{title.toUpperCase()}</h2>
                 {#each paragraphs}
-                <p>{this}</p>
+                <p>
+                    [{paragraphIndexes[this.index] || '...'}] {this}
+                </p>
                 <br />
                 <div class="text-center">
                     {@href github.url}
@@ -63,7 +65,7 @@
 
         {#scope legalInfo}
         <div id="footer" class="text-center">
-            {license} License<br />
+            {license} {="<b>License</b>"}<br />
             ©{new Date().getFullYear()} {author}
         </div>
     </script>
@@ -97,11 +99,13 @@
             ],
             intro: {
                 title: 'Just Another Passion Wheel!',
+                paragraphIndexes: ['I', 'II', 'III', 'IV'],
                 paragraphs: [
                     'The idea of Drop was already in my mind several years ago, and actually I tried to implement it several years ago. Unfortunately, I met some problems and didn\'t make it.',
                     'Years later when frameworks like Angular and Ember are already popular, I still feel better on my own. One of the reasons is that, why use double curly braces while single one can handle it gentlely?',
                     'However, I am now working on my WordsBaking project (a vocabulary app) and I shouldn\'t pay much time developing a framework like this. I have to figure out a way which will make it simpler and easier to achieve.',
-                    'And that brought the philosophy of Drop: decorators. The parsing process of the template is very simple, regex replacing the decorators like {abc} with <drop> elements, then give the task to the browsers.'
+                    'And that brought the philosophy of Drop: decorators. The parsing process of the template is very simple, regex replacing the decorators like {abc} with <drop> elements, then give the task to the browsers.',
+                    'More.'
                 ]
             },
             github: {

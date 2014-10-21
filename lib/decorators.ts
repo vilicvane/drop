@@ -19,8 +19,13 @@
     var htmlDefinition = new DecoratorDefinition('html', null);
 
     htmlDefinition.onchange = (decorator, args) => {
+        var value = decorator.expressionValue;
+        if (value === undefined) {
+            value = '';
+        }
+
         var tempDiv = document.createElement('div');
-        tempDiv.innerHTML = decorator.expressionValue;
+        tempDiv.innerHTML = value;
 
         decorator.target.replaceWith(tempDiv.childNodes);
     };
@@ -32,7 +37,11 @@
     var textDefinition = new DecoratorDefinition('text', null);
 
     textDefinition.onchange = (decorator, args) => {
-        var textNode = document.createTextNode(decorator.expressionValue);
+        var value = decorator.expressionValue;
+        if (value === undefined) {
+            value = '';
+        }
+        var textNode = document.createTextNode(value);
         decorator.target.replaceWith(textNode);
     };
 
@@ -60,7 +69,6 @@
         var fragmentTemplate = scope.fragmentTemplate;
 
         var items: any[] = modifier.expressionValue;
-
         if (!items) {
             return;
         }
@@ -68,7 +76,9 @@
         var fragment = document.createDocumentFragment();
 
         for (var i = 0; i < items.length; i++) {
-            var subScope = new Scope(<HTMLDivElement>fragmentTemplate.cloneNode(true), null, scope, null, [i.toString()]);
+            var subScope = new Scope(<HTMLDivElement>fragmentTemplate.cloneNode(true), null, scope, null, [i.toString()], {
+                index: i
+            });
             fragment.appendChild(subScope.fragment);
         }
 
