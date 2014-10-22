@@ -451,7 +451,7 @@ module Drop {
 
 
     var preprocessRegex =
-        /(<!--(?:(?!-->)[\s\S])*-->)|(\\\\|\\\{)|\{(?:([@#%])([a-z](?:-?[\w]+)*)\s+|(=)?)(?:((?:\\\\|\\\}|(["'])(?:(?!\7|[\r\n\u2028\u2029\\])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:[\r\n\u2028\u2029]|\r\n))*\7|(?:\/(?:[^\r\n\u2028\u2029*/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])(?:[^\r\n\u2028\u2029/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])*\/[gimy]{0,4})|[^}])*))?\}/ig;
+        /(<!--(?:(?!-->)[\s\S])*-->)|(\\\\|\\\{)|\{(?:([@#%])([a-z](?:-?[\w]+)*)(?:\s+|(?=\}))|(=)?)(?:((?:\\\\|\\\}|(["'])(?:(?!\7|[\r\n\u2028\u2029\\])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:[\r\n\u2028\u2029]|\r\n))*\7|(?:\/(?:[^\r\n\u2028\u2029*/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])(?:[^\r\n\u2028\u2029/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])*\/[gimy]{0,4})|[^}])*))?\}/ig;
     var indexOrIdRegex = /^:?\d+$/;
     var keyPathTailRegex = /(?:\.|^)[^.]+$/;
 
@@ -1305,19 +1305,25 @@ module Drop {
                 throw new TypeError('[drop] unknown decorator "' + DecoratorDefinition.typeToMark[type] + name + '" (' + type + ')');
             }
 
-            this._expression = expression;
+            if (expression) {
+                this._expression = expression;
 
-            try {
-                this._value = JSON.parse(expression);
-                this._isValue = true;
-            } catch (e) {
-                this._isValue = false;
-                if (isExpressionRegex.test(expression)) {
-                    var expKeys = expressionToKeys(this._expression);
-                    this._expressionKeys = expKeys;
-                } else {
-                    this._isCompound = true;
+                try {
+                    this._value = JSON.parse(expression);
+                    this._isValue = true;
+                } catch (e) {
+                    this._isValue = false;
+                    if (isExpressionRegex.test(expression)) {
+                        var expKeys = expressionToKeys(this._expression);
+                        this._expressionKeys = expKeys;
+                    } else {
+                        this._isCompound = true;
+                    }
                 }
+            } else {
+                this._expression = undefined;
+                this._isValue = true;
+                this._value = undefined;
             }
 
             if (scope) {
