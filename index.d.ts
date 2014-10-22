@@ -77,6 +77,7 @@ declare module Drop {
         */
         public removeByKeys(keys: string[]): number;
         public remove(keys: string[], index: number, length?: number): number[];
+        public clear(keys: string[]): number[];
         public set<Value>(keys: string[], value: Value): string[];
         private static _wrap(data);
         private static _unwrap(data);

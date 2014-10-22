@@ -126,8 +126,9 @@
                 var scope = modifier.scope;
 
                 switch (arg.changeType) {
-                    case DataChangeType.set:
                     case DataChangeType.clear:
+                        scope.dispose(true);
+                    case DataChangeType.set:
                         modifier.initialize();
                         break;
                     case DataChangeType.insert:

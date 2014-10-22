@@ -420,10 +420,7 @@ var Drop;
         };
 
         XArray.prototype.clear = function () {
-            var ids = this._indexToId.concat();
-            this._indexToId.length = 0;
-            this._array.length = 0;
-            return ids;
+            return this.remove(0, Infinity);
         };
         return XArray;
     })();
@@ -793,6 +790,36 @@ var Drop;
                 ids: ids,
                 keys: idKeys,
                 index: index
+            };
+
+            this.trigger('change', changeEventData);
+
+            return ids;
+        };
+
+        Data.prototype.clear = function (keys) {
+            var info = Data._getIdKeysInfo(this._data, keys);
+            var xarr = info.value;
+            var idKeys = info.keys;
+
+            if (!(xarr instanceof XArray)) {
+                throw new TypeError('[drop] can not clear on a non-array object (' + keys.join('.') + ')');
+            }
+
+            var ids = xarr.clear();
+
+            var changeEventData = {
+                changeType: 3 /* clear */,
+                ids: ids,
+                keys: idKeys
+            };
+
+            this.trigger('change:' + idKeys.join('.'), changeEventData);
+
+            changeEventData = {
+                changeType: 3 /* clear */,
+                ids: ids,
+                keys: idKeys
             };
 
             this.trigger('change', changeEventData);
@@ -2183,8 +2210,9 @@ var Drop;
                 var scope = modifier.scope;
 
                 switch (arg.changeType) {
-                    case 0 /* set */:
                     case 3 /* clear */:
+                        scope.dispose(true);
+                    case 0 /* set */:
                         modifier.initialize();
                         break;
                     case 1 /* insert */:
