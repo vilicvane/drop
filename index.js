@@ -451,6 +451,7 @@ var Drop;
     //#endregion
     var preprocessRegex = /(<!--(?:(?!-->)[\s\S])*-->)|(\\\\|\\\{)|\{(?:([@#%])([a-z](?:-?[\w]+)*)(?:\s+|(?=\}))|(=)?)(?:((?:\\\\|\\\}|(["'])(?:(?!\7|[\r\n\u2028\u2029\\])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:[\r\n\u2028\u2029]|\r\n))*\7|(?:\/(?:[^\r\n\u2028\u2029*/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])(?:[^\r\n\u2028\u2029/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])*\/[gimy]{0,4})|[^}])*))?\}/ig;
     var indexOrIdRegex = /^:?\d+$/;
+    var indexRegex = /\[([^\]]*)\]/g;
     var keyPathTailRegex = /(?:\.|^)[^.]+$/;
 
     var expressionInStringRegex = /(\\\\|\\\{|\\\})|\{((?:[a-z$_][\w$]*|:\d+)(?:\.(?:[a-z$_][\w$]*|:\d+)|\[\d+\])*)\}/ig;
@@ -469,7 +470,7 @@ var Drop;
     var DataChangeType = Drop.DataChangeType;
 
     function expressionToKeys(expression) {
-        return expression.replace(/\s+/g, '').split('.');
+        return expression.replace(/\s+/g, '').replace(indexRegex, '.$1').split('.');
     }
 
     function getKeysLength(keys) {
@@ -497,18 +498,31 @@ var Drop;
         __extends(Data, _super);
         function Data(data) {
             _super.call(this);
-            this._data = Data._wrap(data);
+            this._data = Data.wrap(data);
         }
+        Object.defineProperty(Data.prototype, "helper", {
+            get: function () {
+                return createDataHelper(this._data, []);
+            },
+            enumerable: true,
+            configurable: true
+        });
+
         Data.prototype.getIdKeysInfo = function (keys) {
             return Data._getIdKeysInfo(this._data, keys);
         };
 
-        Data.prototype.get = function (keys) {
-            return Data._unwrap(Data._get(this._data, keys, true));
+        Data.prototype.get = function (keys, getInGlobal) {
+            if (typeof getInGlobal === "undefined") { getInGlobal = false; }
+            return Data.unwrap(Data._get(this._data, keys, true));
         };
 
         Data.prototype.existsKeyInScope = function (scopeKeys, key) {
             return Data._existsKey(Data._get(this._data, scopeKeys), key);
+        };
+
+        Data.prototype.getObjectKeys = function (keys) {
+            return Object.keys(Data._get(this._data, keys));
         };
 
         Data._existsKey = function (data, key) {
@@ -609,6 +623,10 @@ var Drop;
 
         Data._get = function (data, keys, getInGlobal) {
             if (typeof getInGlobal === "undefined") { getInGlobal = false; }
+            if (!keys.length) {
+                return data;
+            }
+
             var key = keys[0];
             var i = 0;
 
@@ -903,16 +921,16 @@ var Drop;
                 }
 
                 oldValue = data.itemById(id);
-                data.setById(id, Data._wrap(value));
+                data.setById(id, Data.wrap(value));
 
                 idKeys.push(':' + id);
             } else {
                 idKeys.push(key);
                 oldValue = data[key];
-                data[key] = Data._wrap(value);
+                data[key] = Data.wrap(value);
             }
 
-            oldValue = Data._unwrap(oldValue);
+            oldValue = Data.unwrap(oldValue);
 
             var changeEventData = {
                 changeType: 0 /* set */,
@@ -935,12 +953,12 @@ var Drop;
             return idKeys;
         };
 
-        Data._wrap = function (data) {
+        Data.wrap = function (data) {
             if (data instanceof Array) {
                 var xArr = new XArray(data);
 
                 xArr.range().forEach(function (item, i) {
-                    xArr.set(i, Data._wrap(item));
+                    xArr.set(i, Data.wrap(item));
                 });
 
                 return xArr;
@@ -951,7 +969,7 @@ var Drop;
 
                 for (var key in data) {
                     if (hop.call(data, key)) {
-                        wrapped[key] = Data._wrap(data[key]);
+                        wrapped[key] = Data.wrap(data[key]);
                     }
                 }
 
@@ -961,11 +979,11 @@ var Drop;
             return data;
         };
 
-        Data._unwrap = function (data) {
+        Data.unwrap = function (data) {
             if (data instanceof XArray) {
                 var arr = data.range();
                 return arr.map(function (item) {
-                    return Data._unwrap(item);
+                    return Data.unwrap(item);
                 });
             }
 
@@ -974,7 +992,7 @@ var Drop;
 
                 for (var key in data) {
                     if (hop.call(data, key)) {
-                        unwrapped[key] = Data._unwrap(data[key]);
+                        unwrapped[key] = Data.unwrap(data[key]);
                     }
                 }
 
@@ -1608,6 +1626,93 @@ var Drop;
     })();
     Drop.Decorator = Decorator;
 
+    function createDataHelper(data, keys) {
+        var value = data.get(keys);
+
+        if (value instanceof Array) {
+            return new ArrayDataHelper(data, keys);
+        }
+
+        if (value instanceof Object && typeof value != 'function') {
+            return new ObjectDataHelper(data, keys);
+        }
+
+        return value;
+    }
+    Drop.createDataHelper = createDataHelper;
+
+    var ArrayDataHelper = (function () {
+        function ArrayDataHelper(data, keys) {
+            this._data = data;
+            this._keys = keys;
+        }
+        Object.defineProperty(ArrayDataHelper.prototype, "length", {
+            get: function () {
+                return this._data.get(this._keys.concat('length'));
+            },
+            set: function (length) {
+                this._data.remove(this._keys, length, Infinity);
+            },
+            enumerable: true,
+            configurable: true
+        });
+
+
+        ArrayDataHelper.prototype.item = function (index) {
+            var info = this._data.getIdKeysInfo(this._keys.concat(index.toString()));
+            return createDataHelper(this._data, info.keys);
+        };
+
+        ArrayDataHelper.prototype.push = function () {
+            var items = [];
+            for (var _i = 0; _i < (arguments.length - 0); _i++) {
+                items[_i] = arguments[_i + 0];
+            }
+            this._data.insert(this._keys, items);
+        };
+
+        ArrayDataHelper.prototype.insert = function (items, index) {
+            if (typeof index === "undefined") { index = Infinity; }
+            this._data.insert(this._keys, items, index);
+        };
+
+        ArrayDataHelper.prototype.remove = function (index, length) {
+            if (typeof length === "undefined") { length = 1; }
+            this._data.remove(this._keys, index, length);
+        };
+
+        ArrayDataHelper.prototype.clear = function () {
+            this._data.clear(this._keys);
+        };
+        return ArrayDataHelper;
+    })();
+    Drop.ArrayDataHelper = ArrayDataHelper;
+
+    var ObjectDataHelper = (function () {
+        function ObjectDataHelper(data, keys) {
+            var _this = this;
+            keys = keys.concat();
+            var objectKeys = data.getObjectKeys(keys);
+
+            objectKeys.forEach(function (key) {
+                var valueKeys = keys.concat(key);
+
+                Object.defineProperty(_this, key, {
+                    get: function () {
+                        return createDataHelper(data, valueKeys);
+                    },
+                    set: function (value) {
+                        data.set(valueKeys, value);
+                    },
+                    configurable: true,
+                    enumerable: true
+                });
+            });
+        }
+        return ObjectDataHelper;
+    })();
+    Drop.ObjectDataHelper = ObjectDataHelper;
+
     var Scope = (function (_super) {
         __extends(Scope, _super);
         function Scope(fragmentTemplate, modifier, parentScope, data, scopeKeys, scopeData) {
@@ -1783,6 +1888,14 @@ var Drop;
             configurable: true
         });
 
+        Object.defineProperty(Scope.prototype, "dataHelper", {
+            get: function () {
+                return createDataHelper(this._data, this.fullScopeKeys);
+            },
+            enumerable: true,
+            configurable: true
+        });
+
         Scope.prototype._setFullScopeKeys = function (scopeKeys) {
             if (this._fullScopeKeysSet) {
                 return;
@@ -1846,6 +1959,10 @@ var Drop;
         };
 
         Scope.prototype.getData = function (keys) {
+            if (typeof keys == 'string') {
+                keys = expressionToKeys(keys);
+            }
+
             var fullIdKeys = this.getFullIdKeys(keys);
             if (fullIdKeys[0] == 'this') {
                 return this._scopeData[fullIdKeys[1]];
@@ -1907,7 +2024,7 @@ var Drop;
                 if (key == 'this') {
                     return this._scopeData[keys[1]];
                 }
-                return this.data.get(keys);
+                return this.data.get(keys, true);
             }
 
             keys = keys.concat();
@@ -1943,7 +2060,7 @@ var Drop;
                 }
             } while(scope = scope.parentScope);
 
-            return data.get(keys);
+            return data.get(keys, true);
         };
 
         Scope.prototype.evaluateString = function (str, isFullKeys) {
@@ -2040,7 +2157,13 @@ var Drop;
 
         Template.apply = function (templateId, data, target) {
             var templateText = document.getElementById(templateId).textContent;
+
+            var startTime = Date.now();
             var template = new Drop.Template(templateText, data);
+            var endTime = Date.now();
+
+            console.debug('parsed template "' + templateId + '" in ' + (endTime - startTime) + 'ms.');
+
             template.appendTo(target);
             return template;
         };

@@ -65,9 +65,11 @@ declare module Drop {
     class Data extends EventHost {
         private _data;
         constructor(data: any);
+        public helper : any;
         public getIdKeysInfo(keys: string[]): IKeysInfo<any>;
-        public get<Value>(keys: string[]): Value;
+        public get<Value>(keys: string[], getInGlobal?: boolean): Value;
         public existsKeyInScope(scopeKeys: string[], key: string): boolean;
+        public getObjectKeys(keys: string[]): string[];
         private static _existsKey(data, key);
         private static _getIdKeysInfo<Value>(data, keys);
         private static _get<Value>(data, keys, getInGlobal?);
@@ -79,8 +81,8 @@ declare module Drop {
         public remove(keys: string[], index: number, length?: number): number[];
         public clear(keys: string[]): number[];
         public set<Value>(keys: string[], value: Value): string[];
-        private static _wrap(data);
-        private static _unwrap(data);
+        static wrap(data: any): any;
+        static unwrap(data: any): any;
     }
     class DecoratorDefinition {
         public type: string;
@@ -163,6 +165,21 @@ declare module Drop {
         private _getStringDependenciesInfo(str);
         private _getExpressionDependenciesInfo(compoundExpression);
     }
+    function createDataHelper(data: Data, keys: string[]): any;
+    class ArrayDataHelper {
+        private _data;
+        private _keys;
+        constructor(data: Data, keys: string[]);
+        public length : number;
+        public item(index: number): any;
+        public push(...items: any[]): void;
+        public insert(items: any[], index?: number): void;
+        public remove(index: number, length?: number): void;
+        public clear(): void;
+    }
+    class ObjectDataHelper {
+        constructor(data: Data, keys: string[]);
+    }
     class Scope extends EventHost {
         public fragmentTemplate: HTMLDivElement;
         public modifier: Decorator;
@@ -179,9 +196,11 @@ declare module Drop {
         private _fullScopeKeysSet;
         private _fullScopeKeys;
         public fullScopeKeys : string[];
+        public dataHelper : any;
         private _setFullScopeKeys(scopeKeys?);
         public setScopeData(key: string, value: any): void;
         public setData(fullIdKeys: string[], value: any): void;
+        public getData<Value>(key: string): Value;
         public getData<Value>(keys: string[]): Value;
         public getFullIdKeys(keys: string[]): string[];
         public evaluate(keys: string[], isFullKeys?: boolean): any;

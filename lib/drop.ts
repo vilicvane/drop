@@ -450,6 +450,7 @@ module Drop {
     var preprocessRegex =
         /(<!--(?:(?!-->)[\s\S])*-->)|(\\\\|\\\{)|\{(?:([@#%])([a-z](?:-?[\w]+)*)(?:\s+|(?=\}))|(=)?)(?:((?:\\\\|\\\}|(["'])(?:(?!\7|[\r\n\u2028\u2029\\])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:[\r\n\u2028\u2029]|\r\n))*\7|(?:\/(?:[^\r\n\u2028\u2029*/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])(?:[^\r\n\u2028\u2029/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])*\/[gimy]{0,4})|[^}])*))?\}/ig;
     var indexOrIdRegex = /^:?\d+$/;
+    var indexRegex = /\[([^\]]*)\]/g;
     var keyPathTailRegex = /(?:\.|^)[^.]+$/;
 
     var expressionInStringRegex = /(\\\\|\\\{|\\\})|\{((?:[a-z$_][\w$]*|:\d+)(?:\.(?:[a-z$_][\w$]*|:\d+)|\[\d+\])*)\}/ig;
@@ -485,7 +486,7 @@ module Drop {
     }
 
     function expressionToKeys(expression: string): string[] {
-        return expression.replace(/\s+/g, '').split('.');
+        return expression.replace(/\s+/g, '').replace(indexRegex, '.$1').split('.');
     }
 
     function getKeysLength(keys: string[]) {
@@ -514,19 +515,27 @@ module Drop {
 
         constructor(data: any) {
             super();
-            this._data = Data._wrap(data);
+            this._data = Data.wrap(data);
+        }
+
+        get helper() {
+            return createDataHelper(this._data, []);
         }
 
         getIdKeysInfo(keys: string[]): IKeysInfo<any> {
             return Data._getIdKeysInfo(this._data, keys);
         }
 
-        get<Value>(keys: string[]): Value {
-            return Data._unwrap(Data._get<Value>(this._data, keys, true));
+        get<Value>(keys: string[], getInGlobal = false): Value {
+            return Data.unwrap(Data._get<Value>(this._data, keys, true));
         }
 
         existsKeyInScope(scopeKeys: string[], key: string): boolean {
             return Data._existsKey(Data._get(this._data, scopeKeys), key);
+        }
+
+        getObjectKeys(keys: string[]): string[] {
+            return Object.keys(Data._get(this._data, keys));
         }
 
         private static _existsKey(data: any, key: string): boolean {
@@ -627,6 +636,10 @@ module Drop {
         }
 
         private static _get<Value>(data: any, keys: string[], getInGlobal = false): Value {
+            if (!keys.length) {
+                return data;
+            }
+
             var key = keys[0];
             var i = 0;
 
@@ -926,16 +939,16 @@ module Drop {
                 }
 
                 oldValue = (<XArray>data).itemById(id);
-                (<XArray>data).setById(id, Data._wrap(value));
+                (<XArray>data).setById(id, Data.wrap(value));
 
                 idKeys.push(':' + id);
             } else {
                 idKeys.push(key);
                 oldValue = data[key];
-                data[key] = Data._wrap(value);
+                data[key] = Data.wrap(value);
             }
 
-            oldValue = Data._unwrap(oldValue);
+            oldValue = Data.unwrap(oldValue);
 
             var changeEventData: IDataChangeEventData<any> = {
                 changeType: DataChangeType.set,
@@ -958,12 +971,12 @@ module Drop {
             return idKeys;
         }
 
-        private static _wrap(data: any): any {
+        static wrap(data: any): any {
             if (data instanceof Array) {
                 var xArr = new XArray(data);
 
                 xArr.range().forEach((item, i) => {
-                    xArr.set(i, Data._wrap(item));
+                    xArr.set(i, Data.wrap(item));
                 });
 
                 return xArr;
@@ -974,7 +987,7 @@ module Drop {
 
                 for (var key in data) {
                     if (hop.call(data, key)) {
-                        wrapped[key] = Data._wrap(data[key]);
+                        wrapped[key] = Data.wrap(data[key]);
                     }
                 }
 
@@ -984,10 +997,10 @@ module Drop {
             return data;
         }
 
-        private static _unwrap(data: any): any {
+        static unwrap(data: any): any {
             if (data instanceof XArray) {
                 var arr: any[] = (<XArray>data).range();
-                return arr.map(item => Data._unwrap(item));
+                return arr.map(item => Data.unwrap(item));
             }
 
             if (data instanceof Object && typeof data != 'function') {
@@ -995,7 +1008,7 @@ module Drop {
 
                 for (var key in data) {
                     if (hop.call(data, key)) {
-                        unwrapped[key] = Data._unwrap(data[key]);
+                        unwrapped[key] = Data.unwrap(data[key]);
                     }
                 }
 
@@ -1158,7 +1171,6 @@ module Drop {
     export class DecoratorTarget {
         private _start = document.createComment('start');
         private _end = document.createComment('end');
-
 
         get start(): Node {
             return this._start;
@@ -1643,6 +1655,80 @@ module Drop {
         }
     }
 
+    export function createDataHelper(data: Data, keys: string[]): any {
+        var value = data.get(keys);
+
+        if (value instanceof Array) {
+            return new ArrayDataHelper(data, keys);
+        }
+
+        if (value instanceof Object && typeof value != 'function') {
+            return new ObjectDataHelper(data, keys);
+        }
+
+        return value;
+    }
+
+    export class ArrayDataHelper {
+        private _data: Data;
+        private _keys: string[];
+
+        constructor(data: Data, keys: string[]) {
+            this._data = data;
+            this._keys = keys;
+        }
+
+        get length(): number {
+            return this._data.get<number>(this._keys.concat('length'));
+        }
+
+        set length(length: number) {
+            this._data.remove(this._keys, length, Infinity);
+        }
+
+        item(index: number): any {
+            var info = this._data.getIdKeysInfo(this._keys.concat(index.toString()));
+            return createDataHelper(this._data, info.keys);
+        }
+
+        push(...items: any[]) {
+            this._data.insert(this._keys, items);
+        }
+
+        insert(items: any[], index = Infinity) {
+            this._data.insert(this._keys, items, index);
+        }
+
+        remove(index: number, length = 1) {
+            this._data.remove(this._keys, index, length);
+        }
+
+        clear() {
+            this._data.clear(this._keys);
+        }
+    }
+
+    export class ObjectDataHelper {
+        constructor(data: Data, keys: string[]) {
+            keys = keys.concat();
+            var objectKeys = data.getObjectKeys(keys);
+
+            objectKeys.forEach(key => {
+                var valueKeys = keys.concat(key);
+
+                Object.defineProperty(this, key, {
+                    get: () => {
+                        return createDataHelper(data, valueKeys);
+                    },
+                    set: (value) => {
+                        data.set(valueKeys, value);
+                    },
+                    configurable: true,
+                    enumerable: true
+                })
+            });
+        }
+    }
 
     export class Scope extends EventHost {
 
@@ -1845,6 +1931,10 @@ module Drop {
             }
         }
 
+        get dataHelper(): any {
+            return createDataHelper(this._data, this.fullScopeKeys);
+        }
+
         private _setFullScopeKeys(scopeKeys?: string[]) {
             if (this._fullScopeKeysSet) {
                 return;
@@ -1907,7 +1997,13 @@ module Drop {
             }
         }
 
-        getData<Value>(keys: string[]): Value {
+        getData<Value>(key: string): Value;
+        getData<Value>(keys: string[]): Value
+        getData<Value>(keys: any): Value {
+            if (typeof keys == 'string') {
+                keys = expressionToKeys(keys);
+            }
+
             var fullIdKeys = this.getFullIdKeys(keys);
             if (fullIdKeys[0] == 'this') {
                 return this._scopeData[fullIdKeys[1]];
@@ -1969,7 +2065,7 @@ module Drop {
                 if (key == 'this') {
                     return this._scopeData[keys[1]];
                 }
-                return this.data.get(keys);
+                return this.data.get(keys, true);
             }
 
             keys = keys.concat();
@@ -2005,7 +2101,7 @@ module Drop {
                 }
             } while (scope = scope.parentScope);
 
-            return data.get(keys);
+            return data.get(keys, true);
         }
 
         evaluateString(str: string, isFullKeys = false): string {
@@ -2109,7 +2205,13 @@ module Drop {
 
         static apply(templateId: string, data: Data, target: HTMLElement) {
             var templateText = document.getElementById(templateId).textContent;
+
+            var startTime = Date.now();
             var template = new Drop.Template(templateText, data);
+            var endTime = Date.now();
+
+            console.debug('parsed template "' + templateId + '" in ' + (endTime - startTime) + 'ms.');
+
             template.appendTo(target);
             return template;
         }

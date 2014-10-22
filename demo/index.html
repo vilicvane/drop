@@ -68,6 +68,7 @@
                     <a href="javascript:;">Remove</a>
                     [{paragraphIndexes[this.index] || '...'}] {this}
                 </p>
+
                 <div class="text-center">
                     {@href github.url}
                     <a class="btn btn-primary btn-lg">GitHub</a>
@@ -94,8 +95,9 @@
     <script src="../index.js"></script>
     <script>
         function addParagraph() {
-            var text = this.getData(['newParagraphText']);
-            this.data.insert(['intro', 'paragraphs'], [text]);
+            var text = this.getData('newParagraphText');
+            var data = this.dataHelper;
+            data.paragraphs.push(text);
         }
 
         /*
