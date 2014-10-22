@@ -400,6 +400,20 @@ module Drop {
             return ids;
         }
 
+        /**
+         * return index
+         */
+        removeById(id: number): number {
+            var index = this._indexToId.indexOf(id);
+
+            if (index >= 0) {
+                this._indexToId.splice(index, 1);
+                delete this._array[id];
+            }
+
+            return index;
+        }
+
         clear(): number[]{
             var ids = this._indexToId.concat();
             this._indexToId.length = 0;
@@ -457,8 +471,10 @@ module Drop {
 
     export interface IDataChangeData<Value> {
         changeType: DataChangeType
+        ids?: number[];
         oldValue?: Value;
-        value: Value;
+        value?: Value;
+        values?: Value[];
         index?: number;
     }
 
@@ -536,7 +552,9 @@ module Drop {
             }
         }
 
-        private static _getIdKeysInfo(data: any, keys: string[]): IKeysInfo<any>{
+        private static _getIdKeysInfo<Value>(data: any, keys: string[]): IKeysInfo<Value>{
+            // logic below should be identical to _get
+
             var idKeys: string[] = [];
             var key: string;
             var i = 0;
@@ -634,6 +652,7 @@ module Drop {
                 return data[key];
             }
 
+            // logic below should be identical to logic in _getIdKeysInfo
             for (i; i < keys.length - 1; i++) {
                 key = keys[i];
                 if (data instanceof XArray && indexOrIdRegex.test(key)) {
@@ -642,9 +661,6 @@ module Drop {
 
                     if (key[0] == ':') {
                         id = Number(key.substr(1));
-                        if (!(<XArray>data).existsId(id)) {
-                            id = null;
-                        }
                     } else {
                         index = Number(key);
                         id = (<XArray>data).id(index);
@@ -690,14 +706,125 @@ module Drop {
             }
         }
 
-        set(keys: string[], value) {
+        insert<Value>(keys: string[], values: Value[], index = Infinity): number[]{
+            var info = Data._getIdKeysInfo<XArray>(this._data, keys);
+            var xarr = info.value;
+            var idKeys = info.keys;
+
+            if (!(xarr instanceof XArray)) {
+                throw new TypeError('[drop] can not insert on a non-array object (' + keys.join('.') + ')');
+            }
+
+            index = Math.min(index, xarr.length);
+            var ids = xarr.insert(values, index);
+
+            var changeEventData: IDataChangeEventData<any> = {
+                changeType: DataChangeType.insert,
+                ids: ids,
+                keys: idKeys,
+                index: index,
+                value: values[0],
+                values: values
+            };
+
+            this.trigger('change:' + idKeys.join('.'), changeEventData);
+
+            changeEventData = {
+                changeType: DataChangeType.insert,
+                ids: ids,
+                keys: idKeys,
+                index: index,
+                value: values[0],
+                values: values
+            };
+
+            this.trigger('change', changeEventData);
+
+            return ids;
+        }
+
+        /**
+         * return index
+         */
+        removeByKeys(keys: string[]): number {
+            keys = keys.concat();
+            var idStr = keys.pop();
+
+            if (!indexOrIdRegex.test(idStr) || idStr[0] != ':') {
+                throw new TypeError('[drop] the last key when use removeByKeys should be a string presenting a number preceding a colon');
+            }
+
+            var id = Number(idStr.substr(1));
+
+            var info = Data._getIdKeysInfo<XArray>(this._data, keys);
+            var xarr = info.value;
+            var idKeys = info.keys;
+
+            if (!(xarr instanceof XArray)) {
+                throw new TypeError('[drop] can not remove on a non-array object (' + keys.join('.') + ')');
+            }
+
+            var index = xarr.removeById(id);
+
+            if (index >= 0) {
+                var changeEventData: IDataChangeEventData<any> = {
+                    changeType: DataChangeType.remove,
+                    ids: [id],
+                    keys: idKeys,
+                    index: index
+                };
+
+                this.trigger('change:' + idKeys.join('.'), changeEventData);
+
+                changeEventData = {
+                    changeType: DataChangeType.remove,
+                    ids: [id],
+                    keys: idKeys,
+                    index: index
+                };
+
+                this.trigger('change', changeEventData);
+            }
+
+            return index;
+        }
+
+        remove(keys: string[], index: number, length = 1): number[] {
+            var info = Data._getIdKeysInfo<XArray>(this._data, keys);
+            var xarr = info.value;
+            var idKeys = info.keys;
+
+            if (!(xarr instanceof XArray)) {
+                throw new TypeError('[drop] can not remove on a non-array object (' + keys.join('.') + ')');
+            }
+
+            var ids = xarr.remove(index, length);
+
+            var changeEventData: IDataChangeEventData<any> = {
+                changeType: DataChangeType.remove,
+                ids: ids,
+                keys: idKeys,
+                index: index
+            };
+
+            this.trigger('change:' + idKeys.join('.'), changeEventData);
+
+            changeEventData = {
+                changeType: DataChangeType.remove,
+                ids: ids,
+                keys: idKeys,
+                index: index
+            };
+
+            this.trigger('change', changeEventData);
+
+            return ids;
+        }
+
+        set<Value>(keys: string[], value: Value): string[] {
             var data = this._data;
 
-            var pathsHash = new StringHash();
-            var paths: string[] = [];
-
-            var indexPath = '';
-            var idPath = '';
+            var idKeys: string[] = [];
 
             var key: string;
             var i = 0;
@@ -714,27 +841,21 @@ module Drop {
 
                     if (key[0] == ':') {
                         id = Number(key.substr(1));
-                        if (!(<XArray>data).existsId(id)) {
-                            id = null;
-                        }
                     } else {
                         index = Number(key);
                         id = (<XArray>data).id(index);
                     }
 
-                    indexPath += '[]';
-                    idPath += '.:' + id;
-
                     if (id == null) {
+                        idKeys.push(key);
                         data = null;
                     } else {
+                        idKeys.push(':' + id);
                         data = (<XArray>data).item(id);
                     }
                 } else {
+                    idKeys.push(key);
                     data = data[key];
-
-                    indexPath += indexPath ? '.' + key : key;
-                    idPath += idPath ? '.' + key : key;
                 }
 
                 if (data == null) {
@@ -780,39 +901,23 @@ module Drop {
                 oldValue = (<XArray>data).itemById(id);
                 (<XArray>data).setById(id, Data._wrap(value));
 
-                indexPath += '[]';
-                idPath += '.:' + id;
+                idKeys.push(':' + id);
             } else {
+                idKeys.push(key);
                 oldValue = data[key];
                 data[key] = Data._wrap(value);
-
-                indexPath += indexPath ? '.' + key : key;
-                idPath += idPath ? '.' + key : key;
-            }
-
-            if (!pathsHash.exists(indexPath)) {
-                pathsHash.set(indexPath);
-                paths.unshift(indexPath);
-            }
-
-            if (!pathsHash.exists(idPath)) {
-                pathsHash.set(idPath);
-                paths.unshift(idPath);
             }
 
             oldValue = Data._unwrap(oldValue);
 
-            var changeEventData: IDataChangeEventData<any>;
+            var changeEventData: IDataChangeEventData<any> = {
+                changeType: DataChangeType.set,
+                keys: keys,
+                oldValue: oldValue,
+                value: value
+            };
 
-            paths.forEach(path => {
-                changeEventData = {
-                    changeType: DataChangeType.set,
-                    keys: keys,
-                    oldValue: oldValue,
-                    value: value
-                };
-                this.trigger('change:' + path, changeEventData);
-            });
+            this.trigger('change:' + idKeys.join('.'), changeEventData);
 
             changeEventData = {
                 changeType: DataChangeType.set,
@@ -820,7 +925,10 @@ module Drop {
                 oldValue: oldValue,
                 value: value
             };
+
             this.trigger('change', changeEventData);
+
+            return idKeys;
         }
 
         private static _wrap(data: any): any {
@@ -996,16 +1104,17 @@ module Drop {
         private _onscopechange(decorator: Decorator, args: IDataChangeEventData<any>[]) {
             var scope = decorator.scope;
             scope.dispose(true);
-
-            //scope.modifier.invoke(null);
-            //scope.decorators.forEach(decorator => {
-            //    decorator.invoke(null);
-            //});
         }
 
         change(decorator: Decorator, args: IDataChangeEventData<any>[]) {
-            this._onscopechange(decorator, args);
-            this.onchange(decorator, args);
+            try {
+                if (args.some(arg => arg.changeType == DataChangeType.set)) {
+                    this._onscopechange(decorator, args);
+                }
+                this.onchange(decorator, args);
+            } catch (e) {
+                errorNextTick(e);
+            }
         }
     }
 
@@ -1020,38 +1129,92 @@ module Drop {
     }
 
     export class DecoratorTarget {
-        constructor(public nodes: Node[]= []) { }
+        private _start = document.createComment('start');
+        private _end = document.createComment('end');
 
-        private _comment: Comment = document.createComment('decorator target');
 
-        each(handler: (node: HTMLElement, index: number) => void) {
-            this.nodes.forEach((node, index) => handler(<any>node, index));
+        get start(): Node {
+            return this._start;
         }
 
-        replaceWith(nodes: DocumentFragment);
-        replaceWith(nodes: Node);
+        get end(): Node {
+            return this._end;
+        }
+
+        constructor(startNode?: Node, endNode?: Node) {
+            if (startNode) {
+                this.initialize(startNode, endNode);
+            }
+        }
+
+        initialized = false;
+
+        initialize(startNode: Node, endNode = startNode) {
+            var parentNode = startNode.parentNode;
+            parentNode.insertBefore(this._start, startNode);
+            parentNode.insertBefore(this._end, endNode.nextSibling);
+            this.initialized = true;
+        }
+
+        dispose() {
+            var node: Node = this._start;
+            var parentNode = node.parentNode;
+            if (!parentNode) {
+                return;
+            }
+
+            var nodes: Node[] = [];
+
+            do {
+                nodes.push(node);
+
+                if (node == this._end) {
+                    break;
+                }
+            } while (node = node.nextSibling);
+
+            nodes.forEach(node => parentNode.removeChild(node));
+        }
+
+        each(handler: (node: HTMLElement, index: number) => void) {
+            var i = 0;
+            var node: Node = this._start;
+
+            while (node = node.nextSibling) {
+                if (node == this._end) {
+                    break;
+                }
+
+                if (node instanceof Comment) {
+                    continue;
+                }
+
+                handler(<any>node, i++);
+            }
+        }
+
+        replaceWith(fragment: DocumentFragment);
+        replaceWith(node: Node);
         replaceWith(nodes: NodeList);
         replaceWith(nodes: Node[]);
         replaceWith(nodes: any) {
-            var prevNodes = this.nodes;
+            var prevNodes: Node[] = [];
+            var node: Node = this._start;
+            var parentNode = node.parentNode;
 
-            var replaceTarget: Node;
-
-            if (prevNodes.length) {
-                for (var i = 1; i < prevNodes.length; i++) {
-                    var node: Node = prevNodes[i];
-                    node.parentNode.removeChild(node);
+            while (node = node.nextSibling) {
+                if (node == this._end) {
+                    break;
                 }
 
-                replaceTarget = prevNodes[0];
-            } else {
-                replaceTarget = this._comment;
+                prevNodes.push(node);
             }
+
+            prevNodes.forEach(node => parentNode.removeChild(node));
 
             var fragment: Node;
 
             if (nodes instanceof DocumentFragment) {
-                this.nodes = slice.call(nodes.childNodes);
                 fragment = nodes;
             } else {
                 if (!(nodes instanceof Array || nodes instanceof NodeList)) {
@@ -1060,18 +1223,26 @@ module Drop {
 
                 fragment = document.createDocumentFragment();
 
-                this.nodes = slice.call(nodes);
-                this.each(node => {
+                nodes = slice.call(nodes);
+                (<Node[]>nodes).forEach(node => {
                     fragment.appendChild(node);
                 });
             }
 
-            if (!this.nodes.length) {
-                fragment = this._comment;
+            parentNode.insertBefore(fragment, this._end);
+        }
+
+        insertBefore(newChild: Node, refChild: Node) {
+            var parentNode = this._start.parentNode;
+
+            if (refChild && refChild.parentNode != parentNode) {
+                refChild = null;
             }
 
-            replaceTarget.parentNode.replaceChild(fragment, replaceTarget);
+            parentNode.insertBefore(newChild, refChild || this._end);
         }
+
+
     }
 
     interface IStringDependenciesInfo {
@@ -1231,6 +1402,10 @@ module Drop {
 
             var listenerTypes: string[];
 
+            //if (/index/.test(expression)) {
+            //    debugger;
+            //}
+
             if (scopeDependencies.length) {
                 listenerTypes = this._scopeListenerTypes;
 
@@ -1257,9 +1432,12 @@ module Drop {
         private _pendingChangeDataArgs: IDataChangeEventData<any>[];
 
         invoke(arg: IDataChangeEventData<any>, sync = true) {
-            if (sync) {
+            // change type other than set may change the index of the data in an array.
+            // if two of them happen synchronously, it might cause incorrect id keys as
+            // all decorators including modifiers are handling these changes asynchronously.
+            if (sync || arg.changeType != DataChangeType.set) {
                 var definition = this.definition;
-                definition.invoke(this, args);
+                definition.invoke(this, [arg]);
                 return;
             }
 
@@ -1306,6 +1484,9 @@ module Drop {
             });
 
             this._listenerTypes = [];
+
+            // nodes
+            this.target.dispose();
         }
 
         get expressionValue(): any {
@@ -1553,7 +1734,7 @@ module Drop {
                         parentNode.replaceChild(commentEle, dropEle);
 
                         var modifier = new Decorator(
-                            new DecoratorTarget([commentEle]),
+                            new DecoratorTarget(commentEle),
                             type,
                             decoratorName,
                             null,
@@ -1589,8 +1770,8 @@ module Drop {
                                         target['decoratorTarget'] = decoratorTarget;
                                     }
                                 } else {
-                                    if (!decoratorTarget.nodes.length) {
-                                        decoratorTarget.nodes.push(target);
+                                    if (!decoratorTarget.initialized) {
+                                        decoratorTarget.initialize(target);
                                     }
                                     break;
                                 }
@@ -1621,8 +1802,14 @@ module Drop {
         private _fullScopeKeysSet = false;
         private _fullScopeKeys: string[];
 
-        get fullScopeKeys(): string[] {
-            return this._fullScopeKeys.concat();
+        get fullScopeKeys(): string[]{
+            if (this._fullScopeKeys) {
+                return this._fullScopeKeys;
+            } else if (!this.parentScope) {
+                return [];
+            } else {
+                return this.parentScope.fullScopeKeys;
+            }
         }
 
         private _setFullScopeKeys(scopeKeys?: string[]) {
@@ -1673,6 +1860,26 @@ module Drop {
             if (!hop.call(scopeData, key) || scopeData[key] != value) {
                 scopeData[key] = value;
                 this.trigger('change:' + key);
+            }
+        }
+
+        setData(fullIdKeys: string[], value: any) {
+            if (fullIdKeys[0] == 'this') {
+                if (fullIdKeys.length != 2) {
+                    throw new TypeError('[drop] scope data does not support nested object (' + fullIdKeys.join('.') + ')');
+                }
+                this.setScopeData(fullIdKeys[1], value);
+            } else {
+                this.data.set(fullIdKeys, value);
+            }
+        }
+
+        getData<Value>(keys: string[]): Value {
+            var fullIdKeys = this.getFullIdKeys(keys);
+            if (fullIdKeys[0] == 'this') {
+                return this._scopeData[fullIdKeys[1]];
+            } else {
+                return this.data.get<Value>(fullIdKeys);
             }
         }
 
@@ -1796,7 +2003,8 @@ module Drop {
 
                     if (!json) {
                         json = 'undefined';
-                    } else if (json[0] == '{') {
+                    } else {
+                        // in case of object notation or number (as you have to use 1..toFixed() or (1).toFixed())
                         json = '(' + json + ')';
                     }
 
@@ -1824,9 +2032,13 @@ module Drop {
                 decorator.dispose();
             });
 
+            this.decorators = [];
+
             this.childScopes.forEach(scope => {
                 scope.dispose();
             });
+
+            this.childScopes = [];
         }
     }
 
@@ -1871,7 +2083,16 @@ module Drop {
 
         static parse(tpl: string): HTMLDivElement {
             tpl = tpl.replace(preprocessRegex,
-                (m, commentToSkip: string, escapedToSkip: string, typeMarker: string, name: string, typeMarker2: string, expansion: string) => {
+                (
+                    m: string,
+                    commentToSkip: string,
+                    escapedToSkip: string,
+                    typeMarker: string,
+                    name: string,
+                    typeMarker2: string,
+                    expansion: string
+                    ) => {
+
                     if (commentToSkip) {
                         return commentToSkip;
                     }

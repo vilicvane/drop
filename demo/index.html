@@ -49,29 +49,39 @@
             {#scope intro}
             {%var editEnabled = false}
             <div class="container">
-                <h2>{title.toUpperCase()}</h2>
-                {#each paragraphs}
-                <p>
-                    [{paragraphIndexes[this.index] || '...'}] {this}
-                </p>
-                <br />
-                <div class="text-center">
-                    {@href github.url}
-                    <a class="btn btn-primary btn-lg">GitHub</a>
-                </div>
+                <!-- Intro Title -->
+                {%click titleOnClick}
                 <h2>
-                    Intro Title
                     {%click-toggle editEnabled}
-                    <small>
-                        <a href="javascript:;">{editEnabled ? 'Done' : 'Edit'}</a>
-                    </small>
+                    <a href="javascript:;">{editEnabled ? 'Done' : 'Edit'}</a>
+                    {title.toUpperCase()}
                 </h2>
                 {%show editEnabled}
                 <div class="form-group">
                     {%bind-value title}
                     <input class="form-control" type="text" />
                 </div>
-
+                <!-- Paragraphs -->
+                {#each paragraphs}
+                <p>
+                    {%click remove}
+                    <a href="javascript:;">Remove</a>
+                    [{paragraphIndexes[this.index] || '...'}] {this}
+                </p>
+                <div class="text-center">
+                    {@href github.url}
+                    <a class="btn btn-primary btn-lg">GitHub</a>
+                </div>
+                <h2>
+                    New Paragraph...
+                    {%click addParagraph}
+                    <a href="javascript:;">Add</a>
+                </h2>
+                <div class="form-group">
+                    {%var newParagraphText = "New paragraph..."}
+                    {%bind-value newParagraphText}
+                    <input type="text" class="form-control" />
+                </div>
             </div>
         </div>
 
@@ -83,6 +93,11 @@
     </script>
     <script src="../index.js"></script>
     <script>
+        function addParagraph() {
+            var text = this.getData(['newParagraphText']);
+            this.data.insert(['intro', 'paragraphs'], [text]);
+        }
+
 
         /*
             Soon I will add a data helper class (maybe DataHelper) to deal with data manipulation.
@@ -111,7 +126,7 @@
             ],
             intro: {
                 title: 'Just Another Passion Wheel!',
-                paragraphIndexes: ['I', 'II', 'III', 'IV'],
+                paragraphIndexes: ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'],
                 paragraphs: [
                     'The idea of Drop was already in my mind several years ago, and actually I tried to implement it several years ago. Unfortunately, I met some problems and didn\'t make it.',
                     'Years later when frameworks like Angular and Ember are already popular, I still feel better on my own. One of the reasons is that, why use double curly braces while single one can handle it gentlely?',

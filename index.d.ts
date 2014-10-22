@@ -35,6 +35,10 @@ declare module Drop {
         public setById(id: number, value: any): boolean;
         public insert(items: any[], index?: number): number[];
         public remove(index: number, length?: number): number[];
+        /**
+        * return index
+        */
+        public removeById(id: number): number;
         public clear(): number[];
     }
     enum DataChangeType {
@@ -45,8 +49,10 @@ declare module Drop {
     }
     interface IDataChangeData<Value> {
         changeType: DataChangeType;
+        ids?: number[];
         oldValue?: Value;
-        value: Value;
+        value?: Value;
+        values?: Value[];
         index?: number;
     }
     interface IDataChangeEventData<Value> extends IDataChangeData<Value>, IEventData {
@@ -63,9 +69,15 @@ declare module Drop {
         public get<Value>(keys: string[]): Value;
         public existsKeyInScope(scopeKeys: string[], key: string): boolean;
         private static _existsKey(data, key);
-        private static _getIdKeysInfo(data, keys);
+        private static _getIdKeysInfo<Value>(data, keys);
         private static _get<Value>(data, keys, getInGlobal?);
-        public set(keys: string[], value: any): void;
+        public insert<Value>(keys: string[], values: Value[], index?: number): number[];
+        /**
+        * return index
+        */
+        public removeByKeys(keys: string[]): number;
+        public remove(keys: string[], index: number, length?: number): number[];
+        public set<Value>(keys: string[], value: Value): string[];
         private static _wrap(data);
         private static _unwrap(data);
     }
@@ -102,14 +114,20 @@ declare module Drop {
         constructor(name: string, oninitialize?: (decorator: Decorator) => void, onchange?: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void);
     }
     class DecoratorTarget {
-        public nodes: Node[];
-        constructor(nodes?: Node[]);
-        private _comment;
+        private _start;
+        private _end;
+        public start : Node;
+        public end : Node;
+        constructor(startNode?: Node, endNode?: Node);
+        public initialized: boolean;
+        public initialize(startNode: Node, endNode?: Node): void;
+        public dispose(): void;
         public each(handler: (node: HTMLElement, index: number) => void): void;
-        public replaceWith(nodes: DocumentFragment): any;
-        public replaceWith(nodes: Node): any;
+        public replaceWith(fragment: DocumentFragment): any;
+        public replaceWith(node: Node): any;
         public replaceWith(nodes: NodeList): any;
         public replaceWith(nodes: Node[]): any;
+        public insertBefore(newChild: Node, refChild: Node): void;
     }
     class Decorator {
         public target: DecoratorTarget;
@@ -162,6 +180,8 @@ declare module Drop {
         public fullScopeKeys : string[];
         private _setFullScopeKeys(scopeKeys?);
         public setScopeData(key: string, value: any): void;
+        public setData(fullIdKeys: string[], value: any): void;
+        public getData<Value>(keys: string[]): Value;
         public getFullIdKeys(keys: string[]): string[];
         public evaluate(keys: string[], isFullKeys?: boolean): any;
         public evaluateString(str: string, isFullKeys?: boolean): string;

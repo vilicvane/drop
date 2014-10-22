@@ -61,53 +61,177 @@
 
     // #each
 
-    var eachDefinition = new ModifierDefinition('each');
+    module EachModifier {
+        var splice = Array.prototype.splice;
 
-    eachDefinition.oninitialize = modifier => {
-        var scope = modifier.scope;
-
-        var fragmentTemplate = scope.fragmentTemplate;
-
-        var items: any[] = modifier.expressionValue;
-        if (!items) {
-            return;
+        function remove() {
+            var scope: Scope = this;
+            var keys = scope.fullScopeKeys;
+            scope.data.removeByKeys(keys);
         }
 
-        var fragment = document.createDocumentFragment();
-
-        for (var i = 0; i < items.length; i++) {
-            var subScope = new Scope(<HTMLDivElement>fragmentTemplate.cloneNode(true), null, scope, null, [i.toString()], {
-                index: i
-            });
-            fragment.appendChild(subScope.fragment);
+        interface IIndexTarget {
+            comment: Comment;
+            scope: Scope;
         }
 
-        modifier.target.replaceWith(fragment);
-    };
+        var eachDefinition = new ModifierDefinition('each');
 
-    eachDefinition.onchange = (modifier, args) => {
-        modifier.initialize();
-        return;
+        eachDefinition.oninitialize = modifier => {
+            var scope = modifier.scope;
 
-        args.forEach(arg => {
+            var indexTargets: IIndexTarget[] = [];
 
-            switch (arg.changeType) {
-                case DataChangeType.set:
-                case DataChangeType.clear:
-                    modifier.initialize();
-                    return;
+            modifier.data = {
+                indexTargets: indexTargets
+            };
+
+            var fragmentTemplate = scope.fragmentTemplate;
+
+            var items: any[] = modifier.expressionValue;
+            if (!items || !items.length) {
+                modifier.target.replaceWith(null);
+                return;
             }
 
-            // insert
+            var fragment = document.createDocumentFragment();
 
+            for (var i = 0; i < items.length; i++) {
+                var subScope = new Scope(<HTMLDivElement>fragmentTemplate.cloneNode(true), null, scope, null, [i.toString()], {
+                    index: i,
+                    remove: remove
+                });
 
-            // remove
+                var comment = document.createComment(subScope.fullScopeKeys.join('.'));
 
-            // maybe move, etc...
-        });
-    };
+                indexTargets.push({
+                    comment: comment,
+                    scope: subScope
+                });
 
-    DecoratorDefinition.register(eachDefinition);
+                fragment.appendChild(comment);
+                fragment.appendChild(subScope.fragment);
+            }
+
+            modifier.target.replaceWith(fragment);
+        };
+
+        eachDefinition.onchange = (modifier, args) => {
+            if (!args) {
+                modifier.initialize();
+                return;
+            }
+
+            args.forEach(arg => {
+                var scope = modifier.scope;
+
+                switch (arg.changeType) {
+                    case DataChangeType.set:
+                    case DataChangeType.clear:
+                        modifier.initialize();
+                        break;
+                    case DataChangeType.insert:
+                        var fragmentTemplate = scope.fragmentTemplate;
+
+                        var index = arg.index;
+                        var items = arg.values;
+                        var length = items.length;
+
+                        if (!length) {
+                            break;
+                        }
+
+                        var fragment = document.createDocumentFragment();
+                        var tempIndexTargets: IIndexTarget[] = [];
+                        var indexTargets: IIndexTarget[] = modifier.data.indexTargets;
+
+                        var subScopes = scope.childScopes;
+                        var pendingSubScopes: Scope[] = [];
+
+                        for (var i = index; i < index + length; i++) {
+                            var subScope = new Scope(<HTMLDivElement>fragmentTemplate.cloneNode(true), null, scope, null, [i.toString()], {
+                                index: i,
+                                remove: remove
+                            });
+
+                            pendingSubScopes.push(subScopes.pop());
+
+                            var comment = document.createComment(subScope.fullScopeKeys.join('.'));
+
+                            tempIndexTargets.push({
+                                comment: comment,
+                                scope: subScope
+                            });
+
+                            fragment.appendChild(comment);
+                            fragment.appendChild(subScope.fragment);
+                        }
+
+                        var target = indexTargets[index];
+
+                        var targetComment = target && target.comment;
+
+                        for (var i = index; i < indexTargets.length; i++) {
+                            indexTargets[i].scope.setScopeData('index', i + length);
+                        }
+
+                        splice.apply(indexTargets, (<any[]>[index, 0]).concat(tempIndexTargets));
+                        splice.apply(subScopes, (<any[]>[index, 0]).concat(pendingSubScopes));
+
+                        modifier.target.insertBefore(fragment, targetComment);
+                        break;
+                    case DataChangeType.remove:
+                        var index = arg.index;
+                        var ids = arg.ids;
+                        var length = ids.length;
+                        if (!length) {
+                            break;
+                        }
+
+                        var subScopes = scope.childScopes;
+                        var indexTargets: IIndexTarget[] = modifier.data.indexTargets;
+
+                        var target = indexTargets[index];
+                        var endTarget = indexTargets[index + length];
+
+                        var targetNode: Node = target.comment;
+                        var parentNode = targetNode.parentNode;
+                        var endTargetNode = endTarget && endTarget.comment || modifier.target.end;
+
+                        var targetNodes: Node[] = [];
+
+                        do {
+                            if (targetNode == endTargetNode) {
+                                break;
+                            }
+
+                            targetNodes.push(targetNode);
+                        } while (targetNode = targetNode.nextSibling);
+
+                        targetNodes.forEach(node => parentNode.removeChild(node));
+
+                        // remove from child scopes & index targets
+                        var removedScopes = subScopes.splice(index, length);
+                        indexTargets.splice(index, length);
+
+                        removedScopes.forEach(scope => scope.dispose());
+
+                        for (var i = index; i < indexTargets.length; i++) {
+                            indexTargets[i].scope.setScopeData('index', i - length + 1);
+                        }
+
+                        break;
+                }
+
+                // remove
+
+                // maybe move, etc...
+            });
+        };
+
+        DecoratorDefinition.register(eachDefinition);
+    }
+
 
     // %bind-value
 
@@ -130,7 +254,7 @@
         };
 
         function onchange() {
-            processor.scope.data.set(idKeys, this.value);
+            processor.scope.setData(idKeys, this.value);
         }
     };
 
@@ -155,6 +279,7 @@
     DecoratorDefinition.register(bindValueDefinition);
 
     // %var
+
     var varDefinition = new ProcessorDefinition('var');
 
     varDefinition.oninitialize = (processor) => {
@@ -193,17 +318,35 @@
 
     var clickDefinition = new ProcessorDefinition('click');
 
-    clickDefinition.onchange = (processor, args) => {
-        var onclick = processor.expressionValue;
+    clickDefinition.oninitialize = processor => {
+        var handler: (e: MouseEvent) => any;
+
+        if (processor.data) {
+            handler = processor.data.handler;
+        } else {
+            handler = (e) => {
+                var onclick = processor.expressionValue;
+                if (typeof onclick == 'function') {
+                    onclick.call(processor.scope, e);
+                }
+            };
+            processor.data = {
+                handler: handler
+            };
+        }
+
         processor.target.each(ele => {
-            ele.addEventListener('click', onclick);
+            ele.addEventListener('click', handler);
         });
     };
 
+    clickDefinition.onchange = (processor, args) => { };
+
     clickDefinition.ondispose = (processor) => {
-        var onclick = processor.expressionValue;
+        var handler = processor.data.handler;
+
         processor.target.each(ele => {
-            ele.removeEventListener('click', onclick);
+            ele.removeEventListener('click', handler);
         });
     };
 
@@ -223,11 +366,7 @@
         processor.data = {
             onclick: () => {
                 var value = !processor.expressionValue;
-                if (fullIdKeys[0] == 'this') {
-                    processor.scope.setScopeData(fullIdKeys[1], value);
-                } else {
-                    processor.scope.data.set(fullIdKeys, value);
-                }
+                processor.scope.setData(fullIdKeys, value);
             }
         };
 

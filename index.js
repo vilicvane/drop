@@ -405,6 +405,20 @@ var Drop;
             return ids;
         };
 
+        /**
+        * return index
+        */
+        XArray.prototype.removeById = function (id) {
+            var index = this._indexToId.indexOf(id);
+
+            if (index >= 0) {
+                this._indexToId.splice(index, 1);
+                delete this._array[id];
+            }
+
+            return index;
+        };
+
         XArray.prototype.clear = function () {
             var ids = this._indexToId.concat();
             this._indexToId.length = 0;
@@ -521,6 +535,7 @@ var Drop;
         };
 
         Data._getIdKeysInfo = function (data, keys) {
+            // logic below should be identical to _get
             var idKeys = [];
             var key;
             var i = 0;
@@ -623,9 +638,6 @@ var Drop;
 
                     if (key[0] == ':') {
                         id = Number(key.substr(1));
-                        if (!data.existsId(id)) {
-                            id = null;
-                        }
                     } else {
                         index = Number(key);
                         id = data.id(index);
@@ -671,15 +683,127 @@ var Drop;
             }
         };
 
+        Data.prototype.insert = function (keys, values, index) {
+            if (typeof index === "undefined") { index = Infinity; }
+            var info = Data._getIdKeysInfo(this._data, keys);
+            var xarr = info.value;
+            var idKeys = info.keys;
+
+            if (!(xarr instanceof XArray)) {
+                throw new TypeError('[drop] can not insert on a non-array object (' + keys.join('.') + ')');
+            }
+
+            index = Math.min(index, xarr.length);
+            var ids = xarr.insert(values, index);
+
+            var changeEventData = {
+                changeType: 1 /* insert */,
+                ids: ids,
+                keys: idKeys,
+                index: index,
+                value: values[0],
+                values: values
+            };
+
+            this.trigger('change:' + idKeys.join('.'), changeEventData);
+
+            changeEventData = {
+                changeType: 1 /* insert */,
+                ids: ids,
+                keys: idKeys,
+                index: index,
+                value: values[0],
+                values: values
+            };
+
+            this.trigger('change', changeEventData);
+
+            return ids;
+        };
+
+        /**
+        * return index
+        */
+        Data.prototype.removeByKeys = function (keys) {
+            keys = keys.concat();
+            var idStr = keys.pop();
+
+            if (!indexOrIdRegex.test(idStr) || idStr[0] != ':') {
+                throw new TypeError('[drop] the last key when use removeByKeys should be a string presenting a number preceding a colon');
+            }
+
+            var id = Number(idStr.substr(1));
+
+            var info = Data._getIdKeysInfo(this._data, keys);
+            var xarr = info.value;
+            var idKeys = info.keys;
+
+            if (!(xarr instanceof XArray)) {
+                throw new TypeError('[drop] can not remove on a non-array object (' + keys.join('.') + ')');
+            }
+
+            var index = xarr.removeById(id);
+
+            if (index >= 0) {
+                var changeEventData = {
+                    changeType: 2 /* remove */,
+                    ids: [id],
+                    keys: idKeys,
+                    index: index
+                };
+
+                this.trigger('change:' + idKeys.join('.'), changeEventData);
+
+                changeEventData = {
+                    changeType: 2 /* remove */,
+                    ids: [id],
+                    keys: idKeys,
+                    index: index
+                };
+
+                this.trigger('change', changeEventData);
+            }
+
+            return index;
+        };
+
+        Data.prototype.remove = function (keys, index, length) {
+            if (typeof length === "undefined") { length = 1; }
+            var info = Data._getIdKeysInfo(this._data, keys);
+            var xarr = info.value;
+            var idKeys = info.keys;
+
+            if (!(xarr instanceof XArray)) {
+                throw new TypeError('[drop] can not remove on a non-array object (' + keys.join('.') + ')');
+            }
+
+            var ids = xarr.remove(index, length);
+
+            var changeEventData = {
+                changeType: 2 /* remove */,
+                ids: ids,
+                keys: idKeys,
+                index: index
+            };
+
+            this.trigger('change:' + idKeys.join('.'), changeEventData);
+
+            changeEventData = {
+                changeType: 2 /* remove */,
+                ids: ids,
+                keys: idKeys,
+                index: index
+            };
+
+            this.trigger('change', changeEventData);
+
+            return ids;
+        };
+
         Data.prototype.set = function (keys, value) {
-            var _this = this;
             var data = this._data;
 
-            var pathsHash = new StringHash();
-            var paths = [];
-
-            var indexPath = '';
-            var idPath = '';
+            var idKeys = [];
 
             var key;
             var i = 0;
@@ -696,27 +820,21 @@ var Drop;
 
                     if (key[0] == ':') {
                         id = Number(key.substr(1));
-                        if (!data.existsId(id)) {
-                            id = null;
-                        }
                     } else {
                         index = Number(key);
                         id = data.id(index);
                     }
 
-                    indexPath += '[]';
-                    idPath += '.:' + id;
-
                     if (id == null) {
+                        idKeys.push(key);
                         data = null;
                     } else {
+                        idKeys.push(':' + id);
                         data = data.item(id);
                     }
                 } else {
+                    idKeys.push(key);
                     data = data[key];
-
-                    indexPath += indexPath ? '.' + key : key;
-                    idPath += idPath ? '.' + key : key;
                 }
 
                 if (data == null) {
@@ -760,39 +878,23 @@ var Drop;
                 oldValue = data.itemById(id);
                 data.setById(id, Data._wrap(value));
 
-                indexPath += '[]';
-                idPath += '.:' + id;
+                idKeys.push(':' + id);
             } else {
+                idKeys.push(key);
                 oldValue = data[key];
                 data[key] = Data._wrap(value);
-
-                indexPath += indexPath ? '.' + key : key;
-                idPath += idPath ? '.' + key : key;
-            }
-
-            if (!pathsHash.exists(indexPath)) {
-                pathsHash.set(indexPath);
-                paths.unshift(indexPath);
-            }
-
-            if (!pathsHash.exists(idPath)) {
-                pathsHash.set(idPath);
-                paths.unshift(idPath);
             }
 
             oldValue = Data._unwrap(oldValue);
 
-            var changeEventData;
+            var changeEventData = {
+                changeType: 0 /* set */,
+                keys: keys,
+                oldValue: oldValue,
+                value: value
+            };
 
-            paths.forEach(function (path) {
-                changeEventData = {
-                    changeType: 0 /* set */,
-                    keys: keys,
-                    oldValue: oldValue,
-                    value: value
-                };
-                _this.trigger('change:' + path, changeEventData);
-            });
+            this.trigger('change:' + idKeys.join('.'), changeEventData);
 
             changeEventData = {
                 changeType: 0 /* set */,
@@ -800,7 +902,10 @@ var Drop;
                 oldValue: oldValue,
                 value: value
             };
+
             this.trigger('change', changeEventData);
+
+            return idKeys;
         };
 
         Data._wrap = function (data) {
@@ -973,15 +1078,19 @@ var Drop;
         ModifierDefinition.prototype._onscopechange = function (decorator, args) {
             var scope = decorator.scope;
             scope.dispose(true);
-            //scope.modifier.invoke(null);
-            //scope.decorators.forEach(decorator => {
-            //    decorator.invoke(null);
-            //});
         };
 
         ModifierDefinition.prototype.change = function (decorator, args) {
-            this._onscopechange(decorator, args);
-            this.onchange(decorator, args);
+            try  {
+                if (args.some(function (arg) {
+                    return arg.changeType == 0 /* set */;
+                })) {
+                    this._onscopechange(decorator, args);
+                }
+                this.onchange(decorator, args);
+            } catch (e) {
+                errorNextTick(e);
+            }
         };
         return ModifierDefinition;
     })(DecoratorDefinition);
@@ -999,37 +1108,97 @@ var Drop;
     Drop.ProcessorDefinition = ProcessorDefinition;
 
     var DecoratorTarget = (function () {
-        function DecoratorTarget(nodes) {
-            if (typeof nodes === "undefined") { nodes = []; }
-            this.nodes = nodes;
-            this._comment = document.createComment('decorator target');
+        function DecoratorTarget(startNode, endNode) {
+            this._start = document.createComment('start');
+            this._end = document.createComment('end');
+            this.initialized = false;
+            if (startNode) {
+                this.initialize(startNode, endNode);
+            }
         }
-        DecoratorTarget.prototype.each = function (handler) {
-            this.nodes.forEach(function (node, index) {
-                return handler(node, index);
+        Object.defineProperty(DecoratorTarget.prototype, "start", {
+            get: function () {
+                return this._start;
+            },
+            enumerable: true,
+            configurable: true
+        });
+
+        Object.defineProperty(DecoratorTarget.prototype, "end", {
+            get: function () {
+                return this._end;
+            },
+            enumerable: true,
+            configurable: true
+        });
+
+        DecoratorTarget.prototype.initialize = function (startNode, endNode) {
+            if (typeof endNode === "undefined") { endNode = startNode; }
+            var parentNode = startNode.parentNode;
+            parentNode.insertBefore(this._start, startNode);
+            parentNode.insertBefore(this._end, endNode.nextSibling);
+            this.initialized = true;
+        };
+
+        DecoratorTarget.prototype.dispose = function () {
+            var node = this._start;
+            var parentNode = node.parentNode;
+            if (!parentNode) {
+                return;
+            }
+
+            var nodes = [];
+
+            do {
+                nodes.push(node);
+
+                if (node == this._end) {
+                    break;
+                }
+            } while(node = node.nextSibling);
+
+            nodes.forEach(function (node) {
+                return parentNode.removeChild(node);
             });
         };
 
-        DecoratorTarget.prototype.replaceWith = function (nodes) {
-            var prevNodes = this.nodes;
+        DecoratorTarget.prototype.each = function (handler) {
+            var i = 0;
+            var node = this._start;
 
-            var replaceTarget;
-
-            if (prevNodes.length) {
-                for (var i = 1; i < prevNodes.length; i++) {
-                    var node = prevNodes[i];
-                    node.parentNode.removeChild(node);
+            while (node = node.nextSibling) {
+                if (node == this._end) {
+                    break;
                 }
 
-                replaceTarget = prevNodes[0];
-            } else {
-                replaceTarget = this._comment;
+                if (node instanceof Comment) {
+                    continue;
+                }
+
+                handler(node, i++);
             }
+        };
+
+        DecoratorTarget.prototype.replaceWith = function (nodes) {
+            var prevNodes = [];
+            var node = this._start;
+            var parentNode = node.parentNode;
+
+            while (node = node.nextSibling) {
+                if (node == this._end) {
+                    break;
+                }
+
+                prevNodes.push(node);
+            }
+
+            prevNodes.forEach(function (node) {
+                return parentNode.removeChild(node);
+            });
 
             var fragment;
 
             if (nodes instanceof DocumentFragment) {
-                this.nodes = slice.call(nodes.childNodes);
                 fragment = nodes;
             } else {
                 if (!(nodes instanceof Array || nodes instanceof NodeList)) {
@@ -1038,17 +1207,23 @@ var Drop;
 
                 fragment = document.createDocumentFragment();
 
-                this.nodes = slice.call(nodes);
-                this.each(function (node) {
+                nodes = slice.call(nodes);
+                nodes.forEach(function (node) {
                     fragment.appendChild(node);
                 });
             }
 
-            if (!this.nodes.length) {
-                fragment = this._comment;
+            parentNode.insertBefore(fragment, this._end);
+        };
+
+        DecoratorTarget.prototype.insertBefore = function (newChild, refChild) {
+            var parentNode = this._start.parentNode;
+
+            if (refChild && refChild.parentNode != parentNode) {
+                refChild = null;
             }
 
-            replaceTarget.parentNode.replaceChild(fragment, replaceTarget);
+            parentNode.insertBefore(newChild, refChild || this._end);
         };
         return DecoratorTarget;
     })();
@@ -1199,6 +1374,9 @@ var Drop;
 
             var listenerTypes;
 
+            //if (/index/.test(expression)) {
+            //    debugger;
+            //}
             if (scopeDependencies.length) {
                 listenerTypes = this._scopeListenerTypes;
 
@@ -1225,9 +1403,12 @@ var Drop;
         Decorator.prototype.invoke = function (arg, sync) {
             var _this = this;
             if (typeof sync === "undefined") { sync = true; }
-            if (sync) {
+            // change type other than set may change the index of the data in an array.
+            // if two of them happen synchronously, it might cause incorrect id keys as
+            // all decorators including modifiers are handling these changes asynchronously.
+            if (sync || arg.changeType != 0 /* set */) {
                 var definition = this.definition;
-                definition.invoke(this, args);
+                definition.invoke(this, [arg]);
                 return;
             }
 
@@ -1274,6 +1455,9 @@ var Drop;
             });
 
             this._listenerTypes = [];
+
+            // nodes
+            this.target.dispose();
         };
 
         Object.defineProperty(Decorator.prototype, "expressionValue", {
@@ -1498,7 +1682,7 @@ var Drop;
 
                         parentNode.replaceChild(commentEle, dropEle);
 
-                        var modifier = new Decorator(new DecoratorTarget([commentEle]), type, decoratorName, null, dropEle.textContent);
+                        var modifier = new Decorator(new DecoratorTarget(commentEle), type, decoratorName, null, dropEle.textContent);
 
                         var scope = new Scope(nested, modifier, this);
                         break;
@@ -1529,8 +1713,8 @@ var Drop;
                                         target['decoratorTarget'] = decoratorTarget;
                                     }
                                 } else {
-                                    if (!decoratorTarget.nodes.length) {
-                                        decoratorTarget.nodes.push(target);
+                                    if (!decoratorTarget.initialized) {
+                                        decoratorTarget.initialize(target);
                                     }
                                     break;
                                 }
@@ -1554,7 +1738,13 @@ var Drop;
 
         Object.defineProperty(Scope.prototype, "fullScopeKeys", {
             get: function () {
-                return this._fullScopeKeys.concat();
+                if (this._fullScopeKeys) {
+                    return this._fullScopeKeys;
+                } else if (!this.parentScope) {
+                    return [];
+                } else {
+                    return this.parentScope.fullScopeKeys;
+                }
             },
             enumerable: true,
             configurable: true
@@ -1608,6 +1798,26 @@ var Drop;
             if (!hop.call(scopeData, key) || scopeData[key] != value) {
                 scopeData[key] = value;
                 this.trigger('change:' + key);
+            }
+        };
+
+        Scope.prototype.setData = function (fullIdKeys, value) {
+            if (fullIdKeys[0] == 'this') {
+                if (fullIdKeys.length != 2) {
+                    throw new TypeError('[drop] scope data does not support nested object (' + fullIdKeys.join('.') + ')');
+                }
+                this.setScopeData(fullIdKeys[1], value);
+            } else {
+                this.data.set(fullIdKeys, value);
+            }
+        };
+
+        Scope.prototype.getData = function (keys) {
+            var fullIdKeys = this.getFullIdKeys(keys);
+            if (fullIdKeys[0] == 'this') {
+                return this._scopeData[fullIdKeys[1]];
+            } else {
+                return this.data.get(fullIdKeys);
             }
         };
 
@@ -1733,7 +1943,8 @@ var Drop;
 
                 if (!json) {
                     json = 'undefined';
-                } else if (json[0] == '{') {
+                } else {
+                    // in case of object notation or number (as you have to use 1..toFixed() or (1).toFixed())
                     json = '(' + json + ')';
                 }
 
@@ -1760,9 +1971,13 @@ var Drop;
                 decorator.dispose();
             });
 
+            this.decorators = [];
+
             this.childScopes.forEach(function (scope) {
                 scope.dispose();
             });
+
+            this.childScopes = [];
         };
         return Scope;
     })(EventHost);
@@ -1901,48 +2116,174 @@ var Drop;
     Drop.DecoratorDefinition.register(scopeDefinition);
 
     // #each
-    var eachDefinition = new Drop.ModifierDefinition('each');
+    var EachModifier;
+    (function (EachModifier) {
+        var splice = Array.prototype.splice;
 
-    eachDefinition.oninitialize = function (modifier) {
-        var scope = modifier.scope;
-
-        var fragmentTemplate = scope.fragmentTemplate;
-
-        var items = modifier.expressionValue;
-        if (!items) {
-            return;
+        function remove() {
+            var scope = this;
+            var keys = scope.fullScopeKeys;
+            scope.data.removeByKeys(keys);
         }
 
-        var fragment = document.createDocumentFragment();
+        var eachDefinition = new Drop.ModifierDefinition('each');
 
-        for (var i = 0; i < items.length; i++) {
-            var subScope = new Drop.Scope(fragmentTemplate.cloneNode(true), null, scope, null, [i.toString()], {
-                index: i
-            });
-            fragment.appendChild(subScope.fragment);
-        }
+        eachDefinition.oninitialize = function (modifier) {
+            var scope = modifier.scope;
 
-        modifier.target.replaceWith(fragment);
-    };
+            var indexTargets = [];
 
-    eachDefinition.onchange = function (modifier, args) {
-        modifier.initialize();
-        return;
+            modifier.data = {
+                indexTargets: indexTargets
+            };
 
-        args.forEach(function (arg) {
-            switch (arg.changeType) {
-                case 0 /* set */:
-                case 3 /* clear */:
-                    modifier.initialize();
-                    return;
+            var fragmentTemplate = scope.fragmentTemplate;
+
+            var items = modifier.expressionValue;
+            if (!items || !items.length) {
+                modifier.target.replaceWith(null);
+                return;
             }
-            // insert
-            // remove
-            // maybe move, etc...
-        });
-    };
 
-    Drop.DecoratorDefinition.register(eachDefinition);
+            var fragment = document.createDocumentFragment();
+
+            for (var i = 0; i < items.length; i++) {
+                var subScope = new Drop.Scope(fragmentTemplate.cloneNode(true), null, scope, null, [i.toString()], {
+                    index: i,
+                    remove: remove
+                });
+
+                var comment = document.createComment(subScope.fullScopeKeys.join('.'));
+
+                indexTargets.push({
+                    comment: comment,
+                    scope: subScope
+                });
+
+                fragment.appendChild(comment);
+                fragment.appendChild(subScope.fragment);
+            }
+
+            modifier.target.replaceWith(fragment);
+        };
+
+        eachDefinition.onchange = function (modifier, args) {
+            if (!args) {
+                modifier.initialize();
+                return;
+            }
+
+            args.forEach(function (arg) {
+                var scope = modifier.scope;
+
+                switch (arg.changeType) {
+                    case 0 /* set */:
+                    case 3 /* clear */:
+                        modifier.initialize();
+                        break;
+                    case 1 /* insert */:
+                        var fragmentTemplate = scope.fragmentTemplate;
+
+                        var index = arg.index;
+                        var items = arg.values;
+                        var length = items.length;
+
+                        if (!length) {
+                            break;
+                        }
+
+                        var fragment = document.createDocumentFragment();
+                        var tempIndexTargets = [];
+                        var indexTargets = modifier.data.indexTargets;
+
+                        var subScopes = scope.childScopes;
+                        var pendingSubScopes = [];
+
+                        for (var i = index; i < index + length; i++) {
+                            var subScope = new Drop.Scope(fragmentTemplate.cloneNode(true), null, scope, null, [i.toString()], {
+                                index: i,
+                                remove: remove
+                            });
+
+                            pendingSubScopes.push(subScopes.pop());
+
+                            var comment = document.createComment(subScope.fullScopeKeys.join('.'));
+
+                            tempIndexTargets.push({
+                                comment: comment,
+                                scope: subScope
+                            });
+
+                            fragment.appendChild(comment);
+                            fragment.appendChild(subScope.fragment);
+                        }
+
+                        var target = indexTargets[index];
+
+                        var targetComment = target && target.comment;
+
+                        for (var i = index; i < indexTargets.length; i++) {
+                            indexTargets[i].scope.setScopeData('index', i + length);
+                        }
+
+                        splice.apply(indexTargets, [index, 0].concat(tempIndexTargets));
+                        splice.apply(subScopes, [index, 0].concat(pendingSubScopes));
+
+                        modifier.target.insertBefore(fragment, targetComment);
+                        break;
+                    case 2 /* remove */:
+                        var index = arg.index;
+                        var ids = arg.ids;
+                        var length = ids.length;
+                        if (!length) {
+                            break;
+                        }
+
+                        var subScopes = scope.childScopes;
+                        var indexTargets = modifier.data.indexTargets;
+
+                        var target = indexTargets[index];
+                        var endTarget = indexTargets[index + length];
+
+                        var targetNode = target.comment;
+                        var parentNode = targetNode.parentNode;
+                        var endTargetNode = endTarget && endTarget.comment || modifier.target.end;
+
+                        var targetNodes = [];
+
+                        do {
+                            if (targetNode == endTargetNode) {
+                                break;
+                            }
+
+                            targetNodes.push(targetNode);
+                        } while(targetNode = targetNode.nextSibling);
+
+                        targetNodes.forEach(function (node) {
+                            return parentNode.removeChild(node);
+                        });
+
+                        // remove from child scopes & index targets
+                        var removedScopes = subScopes.splice(index, length);
+                        indexTargets.splice(index, length);
+
+                        removedScopes.forEach(function (scope) {
+                            return scope.dispose();
+                        });
+
+                        for (var i = index; i < indexTargets.length; i++) {
+                            indexTargets[i].scope.setScopeData('index', i - length + 1);
+                        }
+
+                        break;
+                }
+                // remove
+                // maybe move, etc...
+            });
+        };
+
+        Drop.DecoratorDefinition.register(eachDefinition);
+    })(EachModifier || (EachModifier = {}));
 
     // %bind-value
     // target limitation in the future?
@@ -1964,7 +2305,7 @@ var Drop;
         };
 
         function onchange() {
-            processor.scope.data.set(idKeys, this.value);
+            processor.scope.setData(idKeys, this.value);
         }
     };
 
@@ -2027,17 +2368,36 @@ var Drop;
     // %click
     var clickDefinition = new Drop.ProcessorDefinition('click');
 
-    clickDefinition.onchange = function (processor, args) {
-        var onclick = processor.expressionValue;
+    clickDefinition.oninitialize = function (processor) {
+        var handler;
+
+        if (processor.data) {
+            handler = processor.data.handler;
+        } else {
+            handler = function (e) {
+                var onclick = processor.expressionValue;
+                if (typeof onclick == 'function') {
+                    onclick.call(processor.scope, e);
+                }
+            };
+            processor.data = {
+                handler: handler
+            };
+        }
+
         processor.target.each(function (ele) {
-            ele.addEventListener('click', onclick);
+            ele.addEventListener('click', handler);
         });
     };
 
+    clickDefinition.onchange = function (processor, args) {
+    };
+
     clickDefinition.ondispose = function (processor) {
-        var onclick = processor.expressionValue;
+        var handler = processor.data.handler;
+
         processor.target.each(function (ele) {
-            ele.removeEventListener('click', onclick);
+            ele.removeEventListener('click', handler);
         });
     };
 
@@ -2056,11 +2416,7 @@ var Drop;
         processor.data = {
             onclick: function () {
                 var value = !processor.expressionValue;
-                if (fullIdKeys[0] == 'this') {
-                    processor.scope.setScopeData(fullIdKeys[1], value);
-                } else {
-                    processor.scope.data.set(fullIdKeys, value);
-                }
+                processor.scope.setData(fullIdKeys, value);
             }
         };
 
