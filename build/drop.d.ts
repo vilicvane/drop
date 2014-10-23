@@ -111,11 +111,19 @@ declare module Drop {
         private _onscopechange(decorator, args);
         public change(decorator: Decorator, args: IDataChangeEventData<any>[]): void;
     }
+    /**
+    * Create definition of a processor.
+    *
+    */
     class ProcessorDefinition extends DecoratorDefinition {
         public oninitialize: (decorator: Decorator) => void;
         public onchange: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void;
         constructor(name: string, oninitialize?: (decorator: Decorator) => void, onchange?: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void);
     }
+    /**
+    * DecoratorTarget
+    *
+    */
     class DecoratorTarget {
         private _removedMarker;
         private _tempParentNode;
@@ -135,7 +143,11 @@ declare module Drop {
         public replaceWith(nodes: NodeList): any;
         public replaceWith(nodes: Node[]): any;
         public insertBefore(newChild: Node, refChild: Node): void;
+        public appendChild(child: Node): void;
     }
+    /**
+    * Decorator
+    */
     class Decorator {
         public target: DecoratorTarget;
         public type: string;

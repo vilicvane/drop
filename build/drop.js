@@ -1141,6 +1141,10 @@ var Drop;
     })(DecoratorDefinition);
     Drop.ModifierDefinition = ModifierDefinition;
 
+    /**
+    * Create definition of a processor.
+    *
+    */
     var ProcessorDefinition = (function (_super) {
         __extends(ProcessorDefinition, _super);
         function ProcessorDefinition(name, oninitialize, onchange) {
@@ -1152,6 +1156,10 @@ var Drop;
     })(DecoratorDefinition);
     Drop.ProcessorDefinition = ProcessorDefinition;
 
+    /**
+    * DecoratorTarget
+    *
+    */
     var DecoratorTarget = (function () {
         function DecoratorTarget(startNode, endNode) {
             this._start = document.createComment('start');
@@ -1323,10 +1331,17 @@ var Drop;
 
             parentNode.insertBefore(newChild, refChild || this._end);
         };
+
+        DecoratorTarget.prototype.appendChild = function (child) {
+            this.insertBefore(child, null);
+        };
         return DecoratorTarget;
     })();
     Drop.DecoratorTarget = DecoratorTarget;
 
+    /**
+    * Decorator
+    */
     var Decorator = (function () {
         function Decorator(target, type, name, scope, expression) {
             this.target = target;
@@ -1420,8 +1435,6 @@ var Drop;
                 if (typeof value == 'string') {
                     var sInfo = this._getStringDependenciesInfo(value);
                     this._value = sInfo.stringWithFullKeys;
-
-                    //console.log(this._value);
                     scopeDependencies = sInfo.scopeDependencies;
                     dependencies = sInfo.dependencies;
                 }
@@ -1478,9 +1491,6 @@ var Drop;
 
             var listenerTypes;
 
-            //if (/index/.test(expression)) {
-            //    debugger;
-            //}
             if (scopeDependencies.length) {
                 listenerTypes = this._scopeListenerTypes;
 
@@ -2697,4 +2707,4 @@ var Drop;
 })(Drop || (Drop = {}));
 /// <reference path="lib/drop.ts" />
 /// <reference path="lib/decorators.ts" />
-//# sourceMappingURL=index.js.map
+//# sourceMappingURL=drop.js.map

@@ -1158,6 +1158,10 @@ module Drop {
         }
     }
 
+    /**
+     * Create definition of a processor.
+     * 
+     */
     export class ProcessorDefinition extends DecoratorDefinition {
         constructor(
             name: string,
@@ -1168,6 +1172,10 @@ module Drop {
         }
     }
 
+    /**
+     * DecoratorTarget
+     * 
+     */
     export class DecoratorTarget {
         private _removedMarker: Node;
         private _tempParentNode: Node;
@@ -1335,7 +1343,9 @@ module Drop {
             parentNode.insertBefore(newChild, refChild || this._end);
         }
 
-
+        appendChild(child: Node) {
+            this.insertBefore(child, null);
+        }
     }
 
     interface IStringDependenciesInfo {
@@ -1350,6 +1360,9 @@ module Drop {
         expressionWithFullKeys: string;
     }
 
+    /**
+     * Decorator
+     */
     export class Decorator {
         definition: DecoratorDefinition;
         initialized = false;
@@ -1445,7 +1458,6 @@ module Drop {
                 if (typeof value == 'string') {
                     var sInfo = this._getStringDependenciesInfo(value);
                     this._value = sInfo.stringWithFullKeys;
-                    //console.log(this._value);
                     scopeDependencies = sInfo.scopeDependencies;
                     dependencies = sInfo.dependencies;
                 }
@@ -1500,10 +1512,6 @@ module Drop {
             };
 
             var listenerTypes: string[];
-
-            //if (/index/.test(expression)) {
-            //    debugger;
-            //}
 
             if (scopeDependencies.length) {
                 listenerTypes = this._scopeListenerTypes;
