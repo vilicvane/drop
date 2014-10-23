@@ -519,7 +519,7 @@ module Drop {
         }
 
         get helper() {
-            return createDataHelper(this._data, []);
+            return createDataHelper(this, []);
         }
 
         getIdKeysInfo(keys: string[]): IKeysInfo<any> {

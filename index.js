@@ -502,7 +502,7 @@ var Drop;
         }
         Object.defineProperty(Data.prototype, "helper", {
             get: function () {
-                return createDataHelper(this._data, []);
+                return createDataHelper(this, []);
             },
             enumerable: true,
             configurable: true
