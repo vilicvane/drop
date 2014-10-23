@@ -446,9 +446,10 @@ module Drop {
     //    ].join('|'), 'g');
     //#endregion
 
-
+    var decoratorTypeRegex = /^(?:attribute|text|html|modifier|processor)$/;
+    var decoratorNameRegex = /^-?[a-z](?:\.?-?[a-z][\w]*)*$/;
     var preprocessRegex =
-        /(<!--(?:(?!-->)[\s\S])*-->)|(\\\\|\\\{)|\{(?:([@#%])([a-z](?:-?[\w]+)*)(?:\s+|(?=\}))|(=)?)(?:((?:\\\\|\\\}|(["'])(?:(?!\7|[\r\n\u2028\u2029\\])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:[\r\n\u2028\u2029]|\r\n))*\7|(?:\/(?:[^\r\n\u2028\u2029*/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])(?:[^\r\n\u2028\u2029/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])*\/[gimy]{0,4})|[^}])*))?\}/ig;
+        /(<!--(?:(?!-->)[\s\S])*-->)|(\\\\|\\\{)|\{(?:([@#%])(-?[a-z](?:\.?-?[a-z][\w]*)*)(?:\s+|(?=\}))|(=)?)(?:((?:\\\\|\\\}|(["'])(?:(?!\7|[\r\n\u2028\u2029\\])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:[\r\n\u2028\u2029]|\r\n))*\7|(?:\/(?:[^\r\n\u2028\u2029*/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])(?:[^\r\n\u2028\u2029/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])*\/[gimy]{0,4})|[^}])*))?\}/ig;
     var indexOrIdRegex = /^:?\d+$/;
     var indexRegex = /\[([^\]]*)\]/g;
     var keyPathTailRegex = /(?:\.|^)[^.]+$/;
@@ -1024,6 +1025,13 @@ module Drop {
             public ondispose?: (decorator: Decorator) => void
             ) {
 
+            if (!decoratorTypeRegex.test(type)) {
+                throw new TypeError('[drop] invalid decorator type "' + type + '"');
+            }
+
+            if (!decoratorNameRegex.test(name)) {
+                throw new TypeError('[drop] invalid decorator name "' + name + '"');
+            }
         }
 
         initialize(decorator: Decorator) {

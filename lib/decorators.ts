@@ -5,9 +5,19 @@
     var attributeDefinition = new DecoratorDefinition('attribute', null);
 
     attributeDefinition.onchange = (decorator, args) => {
-        decorator.target.each((target: Element) => {
-            if (target.setAttribute) {
-                target.setAttribute(decorator.name, decorator.expressionValue);
+        var name = decorator.name;
+        var keys = name.split('.');
+        var value = decorator.expressionValue;
+
+        decorator.target.each((ele: HTMLElement) => {
+            if (keys.length == 2) {
+                var key = keys[0];
+
+                if (key in ele) {
+                    ele[key][keys[1]] = value;
+                }
+            } else if (ele.setAttribute) {
+                ele.setAttribute(name, value);
             }
         });
     };

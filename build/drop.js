@@ -449,7 +449,9 @@ var Drop;
     //        invalidCharsRegex.source
     //    ].join('|'), 'g');
     //#endregion
-    var preprocessRegex = /(<!--(?:(?!-->)[\s\S])*-->)|(\\\\|\\\{)|\{(?:([@#%])([a-z](?:-?[\w]+)*)(?:\s+|(?=\}))|(=)?)(?:((?:\\\\|\\\}|(["'])(?:(?!\7|[\r\n\u2028\u2029\\])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:[\r\n\u2028\u2029]|\r\n))*\7|(?:\/(?:[^\r\n\u2028\u2029*/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])(?:[^\r\n\u2028\u2029/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])*\/[gimy]{0,4})|[^}])*))?\}/ig;
+    var decoratorTypeRegex = /^(?:attribute|text|html|modifier|processor)$/;
+    var decoratorNameRegex = /^-?[a-z](?:\.?-?[a-z][\w]*)*$/;
+    var preprocessRegex = /(<!--(?:(?!-->)[\s\S])*-->)|(\\\\|\\\{)|\{(?:([@#%])(-?[a-z](?:\.?-?[a-z][\w]*)*)(?:\s+|(?=\}))|(=)?)(?:((?:\\\\|\\\}|(["'])(?:(?!\7|[\r\n\u2028\u2029\\])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:[\r\n\u2028\u2029]|\r\n))*\7|(?:\/(?:[^\r\n\u2028\u2029*/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])(?:[^\r\n\u2028\u2029/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])*\/[gimy]{0,4})|[^}])*))?\}/ig;
     var indexOrIdRegex = /^:?\d+$/;
     var indexRegex = /\[([^\]]*)\]/g;
     var keyPathTailRegex = /(?:\.|^)[^.]+$/;
@@ -1004,6 +1006,13 @@ var Drop;
             this.oninitialize = oninitialize;
             this.onchange = onchange;
             this.ondispose = ondispose;
+            if (!decoratorTypeRegex.test(type)) {
+                throw new TypeError('[drop] invalid decorator type "' + type + '"');
+            }
+
+            if (!decoratorNameRegex.test(name)) {
+                throw new TypeError('[drop] invalid decorator name "' + name + '"');
+            }
         }
         DecoratorDefinition.prototype.initialize = function (decorator) {
             if (decorator.initialized && decorator.type == 'modifier') {
@@ -2305,9 +2314,19 @@ var Drop;
     var attributeDefinition = new Drop.DecoratorDefinition('attribute', null);
 
     attributeDefinition.onchange = function (decorator, args) {
-        decorator.target.each(function (target) {
-            if (target.setAttribute) {
-                target.setAttribute(decorator.name, decorator.expressionValue);
+        var name = decorator.name;
+        var keys = name.split('.');
+        var value = decorator.expressionValue;
+
+        decorator.target.each(function (ele) {
+            if (keys.length == 2) {
+                var key = keys[0];
+
+                if (key in ele) {
+                    ele[key][keys[1]] = value;
+                }
+            } else if (ele.setAttribute) {
+                ele.setAttribute(name, value);
             }
         });
     };
