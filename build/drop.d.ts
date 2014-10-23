@@ -188,6 +188,7 @@ declare module Drop {
         constructor(data: Data, keys: string[]);
         public length : number;
         public item(index: number): any;
+        public set(index: number, value: any): void;
         public push(...items: any[]): void;
         public insert(items: any[], index?: number): void;
         public remove(index: number, length?: number): void;

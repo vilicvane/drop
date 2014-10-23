@@ -885,14 +885,6 @@ var Drop;
                 if (data == null) {
                     throw new TypeError('[drop] can not set value because "' + keys.slice(0, i).join('.') + '" is null or undefined');
                 }
-                //if (!pathsHash.exists(indexPath)) {
-                //    pathsHash.set(indexPath);
-                //    paths.unshift(indexPath);
-                //}
-                //if (!pathsHash.exists(idPath)) {
-                //    pathsHash.set(idPath);
-                //    paths.unshift(idPath);
-                //}
             }
 
             var oldValue;
@@ -1461,7 +1453,7 @@ var Drop;
                 }
             } else {
                 var expKeys = this._expressionKeys.concat();
-                var keysLength = getKeysLength(expKeys);
+                var keysLength = getKeysLength(expKeys) || 1;
 
                 var fullIdKeys = scope.getFullIdKeys(expKeys);
 
@@ -1726,6 +1718,10 @@ var Drop;
             return createDataHelper(this._data, info.keys);
         };
 
+        ArrayDataHelper.prototype.set = function (index, value) {
+            this._data.set(this._keys.concat(index.toString()), value);
+        };
+
         ArrayDataHelper.prototype.push = function () {
             var items = [];
             for (var _i = 0; _i < (arguments.length - 0); _i++) {
@@ -1851,11 +1847,18 @@ var Drop;
             var fragmentDiv = this.fragmentTemplate.cloneNode(true);
 
             var decorators = [];
-            var decoratorsToInvoke = [];
 
             var dropEles = slice.call(fragmentDiv.getElementsByTagName('drop'));
 
             dropEles.forEach(function (dropEle) {
+                var parentNode = dropEle.parentNode;
+                while (parentNode != fragmentDiv) {
+                    parentNode = parentNode.parentNode;
+                    if (!parentNode) {
+                        return;
+                    }
+                }
+
                 var decoratorName = dropEle.getAttribute('name');
                 var type = dropEle.getAttribute('type');
 
@@ -2358,8 +2361,7 @@ var Drop;
     (function (EachModifier) {
         var splice = Array.prototype.splice;
 
-        function remove() {
-            var scope = this;
+        function remove(e, scope) {
             var keys = scope.fullScopeKeys;
             scope.data.removeByKeys(keys);
         }
@@ -2616,7 +2618,7 @@ var Drop;
             handler = function (e) {
                 var onclick = processor.expressionValue;
                 if (typeof onclick == 'function') {
-                    onclick.call(processor.scope, e);
+                    onclick.call(this, e, processor.scope);
                 }
             };
             processor.data = {

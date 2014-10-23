@@ -99,8 +99,8 @@
     </script>
     <script src="../build/drop.js"></script>
     <script>
-        function addParagraph() {
-            var data = this.dataHelper;
+        function addParagraph(e, scope) {
+            var data = scope.dataHelper;
             var text = data.newParagraphText;
             data.paragraphs.push(text);
         }
@@ -150,7 +150,6 @@
         });
 
         var template = Drop.Template.apply('body-template', data, document.body);
-
     </script>
 </body>
 </html>

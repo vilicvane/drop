@@ -64,8 +64,7 @@
     module EachModifier {
         var splice = Array.prototype.splice;
 
-        function remove() {
-            var scope: Scope = this;
+        function remove(e, scope: Scope) {
             var keys = scope.fullScopeKeys;
             scope.data.removeByKeys(keys);
         }
@@ -325,10 +324,10 @@
         if (processor.data) {
             handler = processor.data.handler;
         } else {
-            handler = (e) => {
+            handler = function (e) {
                 var onclick = processor.expressionValue;
                 if (typeof onclick == 'function') {
-                    onclick.call(processor.scope, e);
+                    onclick.call(this, e, processor.scope);
                 }
             };
             processor.data = {

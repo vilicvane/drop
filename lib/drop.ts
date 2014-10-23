@@ -901,16 +901,6 @@ module Drop {
                 if (data == null) {
                     throw new TypeError('[drop] can not set value because "' + keys.slice(0, i).join('.') + '" is null or undefined');
                 }
-
-                //if (!pathsHash.exists(indexPath)) {
-                //    pathsHash.set(indexPath);
-                //    paths.unshift(indexPath);
-                //}
-
-                //if (!pathsHash.exists(idPath)) {
-                //    pathsHash.set(idPath);
-                //    paths.unshift(idPath);
-                //}
             }
 
             var oldValue: any;
@@ -1484,7 +1474,7 @@ module Drop {
                 }
             } else {
                 var expKeys = this._expressionKeys.concat();
-                var keysLength = getKeysLength(expKeys);
+                var keysLength = getKeysLength(expKeys) || 1;
 
                 var fullIdKeys = scope.getFullIdKeys(expKeys);
 
@@ -1753,6 +1743,10 @@ module Drop {
             return createDataHelper(this._data, info.keys);
         }
 
+        set(index: number, value: any) {
+            this._data.set(this._keys.concat(index.toString()), value);
+        }
+
         push(...items: any[]) {
             this._data.insert(this._keys, items);
         }
@@ -1866,11 +1860,18 @@ module Drop {
             var fragmentDiv = <HTMLDivElement>this.fragmentTemplate.cloneNode(true);
 
             var decorators: Decorator[] = [];
-            var decoratorsToInvoke: Decorator[] = [];
 
             var dropEles = <DropElement[]>slice.call(fragmentDiv.getElementsByTagName('drop'));
 
             dropEles.forEach(dropEle => {
+                var parentNode = dropEle.parentNode;
+                while (parentNode != fragmentDiv) {
+                    parentNode = parentNode.parentNode;
+                    if (!parentNode) {
+                        return;
+                    }
+                }
+
                 var decoratorName = dropEle.getAttribute('name');
                 var type = dropEle.getAttribute('type');
 

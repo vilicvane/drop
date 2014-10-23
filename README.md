@@ -22,8 +22,8 @@ To start with, I need to point out that DropJS is in its very first period. Thou
     </div>
 </script>
 <script>
-    function onRowClick() {
-        var data = this.dataHelper;
+    function onRowClick(e, scope) {
+        var data = scope.dataHelper;
         alert('row ' + (data.index + 1) + ' clicked');
     }
 
