@@ -42,4 +42,4 @@ To start with, I need to point out that DropJS is in its very first period. Thou
 </script>
 ```
 
-Checkout this quick [demo](https://rawgit.com/vilic/drop/master/demo/index.html).
+Checkout another quick [demo](https://rawgit.com/vilic/drop/master/demo/index.html).
