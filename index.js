@@ -1163,7 +1163,7 @@ var Drop;
         }
         Object.defineProperty(DecoratorTarget.prototype, "start", {
             get: function () {
-                return this._start;
+                return this._removedMarker || this._start;
             },
             enumerable: true,
             configurable: true
@@ -1171,7 +1171,7 @@ var Drop;
 
         Object.defineProperty(DecoratorTarget.prototype, "end", {
             get: function () {
-                return this._end;
+                return this._removedMarker || this._end;
             },
             enumerable: true,
             configurable: true
@@ -1205,6 +1205,59 @@ var Drop;
             nodes.forEach(function (node) {
                 return parentNode.removeChild(node);
             });
+        };
+
+        DecoratorTarget.prototype.remove = function () {
+            if (this._tempParentNode) {
+                return;
+            }
+
+            var tempParentNode = document.createElement('div');
+
+            var node = this._start;
+            var parentNode = node.parentNode;
+
+            var removedMarker = document.createComment('removed marker');
+            parentNode.insertBefore(removedMarker, node);
+
+            var nodes = [];
+
+            do {
+                nodes.push(node);
+
+                if (node == this._end) {
+                    break;
+                }
+            } while(node = node.nextSibling);
+
+            nodes.forEach(function (node) {
+                return tempParentNode.appendChild(node);
+            });
+
+            this._tempParentNode = tempParentNode;
+            this._removedMarker = removedMarker;
+        };
+
+        DecoratorTarget.prototype.append = function () {
+            var tempParentNode = this._tempParentNode;
+            if (!tempParentNode) {
+                return;
+            }
+
+            var removedMarker = this._removedMarker;
+            var parentNode = removedMarker.parentNode;
+
+            var fragment = document.createDocumentFragment();
+
+            var nodes = tempParentNode.childNodes;
+            while (nodes.length) {
+                fragment.appendChild(nodes[0]);
+            }
+
+            parentNode.replaceChild(fragment, removedMarker);
+
+            this._tempParentNode = null;
+            this._removedMarker = null;
         };
 
         DecoratorTarget.prototype.each = function (handler) {
@@ -1784,14 +1837,15 @@ var Drop;
         });
 
         Scope.prototype.initialize = function () {
+            var _this = this;
             var fragmentDiv = this.fragmentTemplate.cloneNode(true);
 
             var decorators = [];
+            var decoratorsToInvoke = [];
 
-            var dropEles = fragmentDiv.getElementsByTagName('drop');
+            var dropEles = slice.call(fragmentDiv.getElementsByTagName('drop'));
 
-            while (dropEles.length) {
-                var dropEle = dropEles[0];
+            dropEles.forEach(function (dropEle) {
                 var decoratorName = dropEle.getAttribute('name');
                 var type = dropEle.getAttribute('type');
 
@@ -1822,7 +1876,7 @@ var Drop;
 
                         var modifier = new Decorator(new DecoratorTarget(commentEle), type, decoratorName, null, dropEle.textContent);
 
-                        var scope = new Scope(nested, modifier, this);
+                        var scope = new Scope(nested, modifier, _this);
                         break;
                     default:
                         var target = dropEle;
@@ -1861,13 +1915,13 @@ var Drop;
 
                         dropEle.parentNode.removeChild(dropEle);
 
-                        var decorator = new Decorator(decoratorTarget, type, dropEle.getAttribute('name'), this, dropEle.textContent);
+                        var decorator = new Decorator(decoratorTarget, type, dropEle.getAttribute('name'), _this, dropEle.textContent);
 
                         decorator.invoke(null);
                         decorators.push(decorator);
                         break;
                 }
-            }
+            });
 
             this._fragmentDiv = fragmentDiv;
 
@@ -1890,7 +1944,25 @@ var Drop;
 
         Object.defineProperty(Scope.prototype, "dataHelper", {
             get: function () {
-                return createDataHelper(this._data, this.fullScopeKeys);
+                var _this = this;
+                var helper = createDataHelper(this._data, this.fullScopeKeys);
+
+                var objectKeys = Object.keys(this._scopeData);
+
+                objectKeys.forEach(function (key) {
+                    Object.defineProperty(helper, key, {
+                        get: function () {
+                            return _this._scopeData[key];
+                        },
+                        set: function (value) {
+                            _this.setScopeData(key, value);
+                        },
+                        configurable: true,
+                        enumerable: true
+                    });
+                });
+
+                return helper;
             },
             enumerable: true,
             configurable: true
@@ -2599,12 +2671,29 @@ var Drop;
 
     showDefinition.onchange = function (processor, args) {
         var value = processor.expressionValue;
+
+        //debugger;
         processor.target.each(function (ele) {
             ele.style.display = value ? '' : 'none';
         });
     };
 
     Drop.DecoratorDefinition.register(showDefinition);
+
+    // %if
+    var ifDefinition = new Drop.ProcessorDefinition('if');
+
+    ifDefinition.onchange = function (processor, args) {
+        //debugger;
+        var value = processor.expressionValue;
+        if (value) {
+            processor.target.append();
+        } else {
+            processor.target.remove();
+        }
+    };
+
+    Drop.DecoratorDefinition.register(ifDefinition);
 })(Drop || (Drop = {}));
 /// <reference path="lib/drop.ts" />
 /// <reference path="lib/decorators.ts" />

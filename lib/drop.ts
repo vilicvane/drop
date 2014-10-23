@@ -1169,15 +1169,18 @@ module Drop {
     }
 
     export class DecoratorTarget {
-        private _start = document.createComment('start');
-        private _end = document.createComment('end');
+        private _removedMarker: Node;
+        private _tempParentNode: Node;
+
+        private _start: Node = document.createComment('start');
+        private _end: Node = document.createComment('end');
 
         get start(): Node {
-            return this._start;
+            return this._removedMarker || this._start;
         }
 
         get end(): Node {
-            return this._end;
+            return this._removedMarker || this._end;
         }
 
         constructor(startNode?: Node, endNode?: Node) {
@@ -1196,7 +1199,7 @@ module Drop {
         }
 
         dispose() {
-            var node: Node = this._start;
+            var node = this._start;
             var parentNode = node.parentNode;
             if (!parentNode) {
                 return;
@@ -1215,9 +1218,60 @@ module Drop {
             nodes.forEach(node => parentNode.removeChild(node));
         }
 
+        remove() {
+            if (this._tempParentNode) {
+                return;
+            }
+
+            var tempParentNode = document.createElement('div');
+
+            var node = this._start;
+            var parentNode = node.parentNode;
+
+            var removedMarker = document.createComment('removed marker');
+            parentNode.insertBefore(removedMarker, node);
+
+            var nodes: Node[] = [];
+
+            do {
+                nodes.push(node);
+
+                if (node == this._end) {
+                    break;
+                }
+            } while (node = node.nextSibling);
+
+            nodes.forEach(node => tempParentNode.appendChild(node));
+
+            this._tempParentNode = tempParentNode;
+            this._removedMarker = removedMarker;
+        }
+
+        append() {
+            var tempParentNode = this._tempParentNode;
+            if (!tempParentNode) {
+                return;
+            }
+
+            var removedMarker = this._removedMarker;
+            var parentNode = removedMarker.parentNode;
+
+            var fragment = document.createDocumentFragment();
+
+            var nodes = tempParentNode.childNodes;
+            while (nodes.length) {
+                fragment.appendChild(nodes[0]);
+            }
+
+            parentNode.replaceChild(fragment, removedMarker);
+
+            this._tempParentNode = null;
+            this._removedMarker = null;
+        }
+
         each(handler: (node: HTMLElement, index: number) => void) {
             var i = 0;
-            var node: Node = this._start;
+            var node = this._start;
 
             while (node = node.nextSibling) {
                 if (node == this._end) {
@@ -1238,7 +1292,7 @@ module Drop {
         replaceWith(nodes: Node[]);
         replaceWith(nodes: any) {
             var prevNodes: Node[] = [];
-            var node: Node = this._start;
+            var node = this._start;
             var parentNode = node.parentNode;
 
             while (node = node.nextSibling) {
@@ -1725,7 +1779,7 @@ module Drop {
                     },
                     configurable: true,
                     enumerable: true
-                })
+                });
             });
         }
     }
@@ -1804,30 +1858,15 @@ module Drop {
             var fragmentDiv = <HTMLDivElement>this.fragmentTemplate.cloneNode(true);
 
             var decorators: Decorator[] = [];
+            var decoratorsToInvoke: Decorator[] = [];
 
-            var dropEles = fragmentDiv.getElementsByTagName('drop');
+            var dropEles = <DropElement[]>slice.call(fragmentDiv.getElementsByTagName('drop'));
 
-            while (dropEles.length) {
-                var dropEle = dropEles[0];
+            dropEles.forEach(dropEle => {
                 var decoratorName = dropEle.getAttribute('name');
                 var type = dropEle.getAttribute('type');
 
                 switch (type) {
-                    //case 'html':
-                    //case 'text':
-                    //    var comment = (type == 'text' ? '{' : '{=') + dropEle.textContent + '}';
-                    //    var commentEle = document.createComment(comment);
-
-                    //    dropEle.parentNode.replaceChild(commentEle, dropEle);
-
-                    //    decorators.push(new Decorator(
-                    //        new DecoratorTarget([commentEle]),
-                    //        type,
-                    //        null,
-                    //        this,
-                    //        dropEle.textContent
-                    //        ));
-                    //    break;
                     case 'modifier':
                         var nested = document.createElement('div');
 
@@ -1905,13 +1944,13 @@ module Drop {
                             dropEle.getAttribute('name'),
                             this,
                             dropEle.textContent
-                            )
+                            );
 
                         decorator.invoke(null);
                         decorators.push(decorator);
                         break;
                 }
-            }
+            });
 
             this._fragmentDiv = fragmentDiv;
 
@@ -1932,7 +1971,24 @@ module Drop {
         }
 
         get dataHelper(): any {
-            return createDataHelper(this._data, this.fullScopeKeys);
+            var helper = createDataHelper(this._data, this.fullScopeKeys);
+
+            var objectKeys = Object.keys(this._scopeData);
+
+            objectKeys.forEach(key => {
+                Object.defineProperty(helper, key, {
+                    get: () => {
+                        return this._scopeData[key];
+                    },
+                    set: (value) => {
+                        this.setScopeData(key, value);
+                    },
+                    configurable: true,
+                    enumerable: true
+                });
+            });
+
+            return helper;
         }
 
         private _setFullScopeKeys(scopeKeys?: string[]) {

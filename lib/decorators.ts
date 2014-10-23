@@ -377,7 +377,7 @@
     };
 
     clickToggleDefinition.onchange = (processor, args) => { };
-
+    
     clickToggleDefinition.ondispose = (processor) => {
         var onclick = processor.data.onclick;
         processor.target.each(ele => {
@@ -393,10 +393,27 @@
 
     showDefinition.onchange = (processor, args) => {
         var value = processor.expressionValue;
+        //debugger;
         processor.target.each(ele => {
             ele.style.display = value ? '' : 'none';
         });
     };
 
     DecoratorDefinition.register(showDefinition);
+
+    // %if
+
+    var ifDefinition = new ProcessorDefinition('if');
+
+    ifDefinition.onchange = (processor, args) => {
+        //debugger;
+        var value = processor.expressionValue;
+        if (value) {
+            processor.target.append();
+        } else {
+            processor.target.remove();
+        }
+    };
+
+    DecoratorDefinition.register(ifDefinition);
 }

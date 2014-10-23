@@ -46,11 +46,16 @@
                 </div>
             </div>
 
+            <div class="container">
+                {%click-toggle intro.showIntro}
+                <a href="javascript:;">{intro.showIntro ? 'Hide intro' : 'Show intro'}</a>
+            </div>
+
             {#scope intro}
             {%var editEnabled = false}
+            {%if intro.showIntro}
             <div class="container">
                 <!-- Intro Title -->
-                {%click titleOnClick}
                 <h2>
                     {%click-toggle editEnabled}
                     <a href="javascript:;">{editEnabled ? 'Done' : 'Edit'}</a>
@@ -95,8 +100,8 @@
     <script src="../index.js"></script>
     <script>
         function addParagraph() {
-            var text = this.getData('newParagraphText');
             var data = this.dataHelper;
+            var text = data.newParagraphText;
             data.paragraphs.push(text);
         }
 
@@ -124,6 +129,7 @@
                 }
             ],
             intro: {
+                showIntro: true,
                 title: 'Just Another Passion Wheel!',
                 paragraphIndexes: ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'],
                 paragraphs: [

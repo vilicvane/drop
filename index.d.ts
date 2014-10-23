@@ -117,6 +117,8 @@ declare module Drop {
         constructor(name: string, oninitialize?: (decorator: Decorator) => void, onchange?: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void);
     }
     class DecoratorTarget {
+        private _removedMarker;
+        private _tempParentNode;
         private _start;
         private _end;
         public start : Node;
@@ -125,6 +127,8 @@ declare module Drop {
         public initialized: boolean;
         public initialize(startNode: Node, endNode?: Node): void;
         public dispose(): void;
+        public remove(): void;
+        public append(): void;
         public each(handler: (node: HTMLElement, index: number) => void): void;
         public replaceWith(fragment: DocumentFragment): any;
         public replaceWith(node: Node): any;
