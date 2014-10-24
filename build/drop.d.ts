@@ -92,7 +92,9 @@ declare module Drop {
         public ondispose: (decorator: Decorator) => void;
         private static _modifiersMap;
         private static _processorsMap;
+        private static _componentsMap;
         private static _attribute;
+        private static _event;
         private static _text;
         private static _html;
         constructor(type: string, name: string, oninitialize?: (decorator: Decorator) => void, onchange?: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void, ondispose?: (decorator: Decorator) => void);
@@ -121,6 +123,17 @@ declare module Drop {
         constructor(name: string, oninitialize?: (decorator: Decorator) => void, onchange?: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void);
     }
     /**
+    * Create definition of a component
+    */
+    class ComponentDefinition extends DecoratorDefinition {
+        public oninitialize: (decorator: Decorator) => void;
+        public onchange: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void;
+        constructor(name: string, oninitialize?: (decorator: Decorator) => void, onchange?: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void);
+    }
+    interface IDecoratorTargetEnsureHandler {
+        (node: HTMLElement): void;
+    }
+    /**
     * DecoratorTarget
     *
     */
@@ -135,14 +148,31 @@ declare module Drop {
         public initialized: boolean;
         public initialize(startNode: Node, endNode?: Node): void;
         public dispose(): void;
+        /**
+        * remove this target from DOM tree and insert an marker comment.
+        * see also append()
+        */
         public remove(): void;
+        /**
+        * append the target back to DOM tree.
+        * see also remove()
+        */
         public append(): void;
         public each(handler: (node: HTMLElement, index: number) => void): void;
-        public replaceWith(fragment: DocumentFragment): any;
-        public replaceWith(node: Node): any;
-        public replaceWith(nodes: NodeList): any;
-        public replaceWith(nodes: Node[]): any;
-        public insertBefore(newChild: Node, refChild: Node): void;
+        private _ensureHandlers;
+        private _ensure(nodes?);
+        /**
+        * ensure the handler will be called on every node, including nodes added later.
+        * calling ensure the second time will remove the previous handler,
+        * so every decorator has one single ensure handler that will be triggered
+        * at the same time only.
+        */
+        public ensure(handler: (node: HTMLElement) => void, decorator: Decorator): void;
+        public replaceWith(fragment: DocumentFragment): DocumentFragment;
+        public replaceWith(node: Node): DocumentFragment;
+        public replaceWith(nodes: NodeList): DocumentFragment;
+        public replaceWith(nodes: Node[]): DocumentFragment;
+        public insertBefore(child: Node, refChild: Node): void;
         public appendChild(child: Node): void;
     }
     /**
@@ -162,6 +192,7 @@ declare module Drop {
         private _isCompound;
         private _expression;
         public expression : string;
+        public parsedExpression : string;
         private _expressionKeys;
         public expressionKeys : string[];
         private _expressionFullIdKeys;
@@ -187,8 +218,9 @@ declare module Drop {
         private _keys;
         constructor(data: Data, keys: string[]);
         public length : number;
-        public item(index: number): any;
-        public set(index: number, value: any): void;
+        public item<Value>(index: number): Value;
+        public valueOf<Value>(): Value;
+        public set<Value>(index: number, value: Value): void;
         public push(...items: any[]): void;
         public insert(items: any[], index?: number): void;
         public remove(index: number, length?: number): void;

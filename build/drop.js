@@ -4,10 +4,10 @@
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-'use strict';
-
 var Drop;
 (function (Drop) {
+    'use strict';
+
     Drop.globalEval = eval;
 
     
@@ -449,9 +449,8 @@ var Drop;
     //        invalidCharsRegex.source
     //    ].join('|'), 'g');
     //#endregion
-    var decoratorTypeRegex = /^(?:attribute|text|html|modifier|processor)$/;
     var decoratorNameRegex = /^-?[a-z](?:\.?-?[a-z][\w]*)*$/;
-    var preprocessRegex = /(<!--(?:(?!-->)[\s\S])*-->)|(\\\\|\\\{)|\{(?:([@#%])(-?[a-z](?:\.?-?[a-z][\w]*)*)(?:\s+|(?=\}))|(=)?)(?:((?:\\\\|\\\}|(["'])(?:(?!\7|[\r\n\u2028\u2029\\])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:[\r\n\u2028\u2029]|\r\n))*\7|(?:\/(?:[^\r\n\u2028\u2029*/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])(?:[^\r\n\u2028\u2029/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])*\/[gimy]{0,4})|[^}])*))?\}/ig;
+    var preprocessRegex = /(<!--(?:(?!-->)[\s\S])*-->)|(\\\\|\\\{)|\{(?:([@>#%&])(-?[a-z](?:\.?-?[a-z][\w]*)*)(?:\s+|(?=\}))|(=)?)(?:((?:\\\\|\\\}|(["'])(?:(?!\7|[\r\n\u2028\u2029\\])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:[\r\n\u2028\u2029]|\r\n))*\7|(?:\/(?:[^\r\n\u2028\u2029*/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])(?:[^\r\n\u2028\u2029/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])*\/[gimy]{0,4})|[^}])*))?\}/ig;
     var indexOrIdRegex = /^:?\d+$/;
     var indexRegex = /\[([^\]]*)\]/g;
     var keyPathTailRegex = /(?:\.|^)[^.]+$/;
@@ -459,7 +458,7 @@ var Drop;
     var expressionInStringRegex = /(\\\\|\\\{|\\\})|\{((?:[a-z$_][\w$]*|:\d+)(?:\.(?:[a-z$_][\w$]*|:\d+)|\[\d+\])*)\}/ig;
 
     var isExpressionRegex = /^(?:[a-z$_][\w$]*)(?:\.[a-z$_][\w$]*)*$/i;
-    var compoundExpressionRegex = /(\b(?:typeof|instanceof|new|null|true|false)\b|(["'])(?:(?!\2|[\r\n\u2028\u2029\\])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:[\r\n\u2028\u2029]|\r\n))*\2|(?:(?:(?:0|[1-9]\d*)(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?|0[xX][\da-fA-F]+)|(?:\/(?:[^\r\n\u2028\u2029*/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])(?:[^\r\n\u2028\u2029/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])*\/[gimy]{0,4}))|(\.\s*)?([a-zA-Z$_][\w$_]*(?:\s*\.\s*[a-zA-Z$_][\w$_]*)*)(?!\s*[\(\w$_])|(\{)/g;
+    var compoundExpressionRegex = /(\b(?:typeof|instanceof|new|null|true|false)\b|(["'])(?:(?!\2|[\r\n\u2028\u2029\\])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:[\r\n\u2028\u2029]|\r\n))*\2|(?:(?:(?:0|[1-9]\d*)(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?|0[xX][\da-fA-F]+)|(?:\/(?:[^\r\n\u2028\u2029*/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])(?:[^\r\n\u2028\u2029/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])*\/[gimy]{0,4}))|(?:(^\s*)|\s*)([a-zA-Z$_][\w$_]*)(\s*=(?!=))|(\.\s*)?([a-zA-Z$_][\w$_]*(?:\s*\.\s*[a-zA-Z$_][\w$_]*)*)(?!\s*\(|[\w$_])|(\{)/g;
     var expressionInParsedCompoundRegex = /(["'])(?:(?!\1|[\r\n\u2028\u2029\\])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:[\r\n\u2028\u2029]|\r\n))*\1|\{((?:[\w$]+|:\d+)(?:\.(?:[\w$]+|:\d+))*)\}/ig;
     var escapedRegex = /\\(\\|\{|\})/g;
 
@@ -1006,10 +1005,6 @@ var Drop;
             this.oninitialize = oninitialize;
             this.onchange = onchange;
             this.ondispose = ondispose;
-            if (!decoratorTypeRegex.test(type)) {
-                throw new TypeError('[drop] invalid decorator type "' + type + '"');
-            }
-
             if (!decoratorNameRegex.test(name)) {
                 throw new TypeError('[drop] invalid decorator name "' + name + '"');
             }
@@ -1070,8 +1065,14 @@ var Drop;
                 case 'processor':
                     DecoratorDefinition._processorsMap.set(decorator.name, decorator);
                     break;
+                case 'component':
+                    DecoratorDefinition._componentsMap.set(decorator.name, decorator);
+                    break;
                 case 'attribute':
                     DecoratorDefinition._attribute = decorator;
+                    break;
+                case 'event':
+                    DecoratorDefinition._event = decorator;
                     break;
                 case 'html':
                     DecoratorDefinition._html = decorator;
@@ -1090,8 +1091,12 @@ var Drop;
                     return DecoratorDefinition._modifiersMap.get(name);
                 case 'processor':
                     return DecoratorDefinition._processorsMap.get(name);
+                case 'component':
+                    return DecoratorDefinition._componentsMap.get(name);
                 case 'attribute':
                     return DecoratorDefinition._attribute;
+                case 'event':
+                    return DecoratorDefinition._event;
                 case 'html':
                     return DecoratorDefinition._html;
                 case 'text':
@@ -1102,11 +1107,14 @@ var Drop;
         };
         DecoratorDefinition._modifiersMap = new StringMap();
         DecoratorDefinition._processorsMap = new StringMap();
+        DecoratorDefinition._componentsMap = new StringMap();
 
         DecoratorDefinition.typeToMark = {
             'modifier': '#',
             'processor': '%',
             'attribute': '@',
+            'event': '>',
+            'component': '&',
             'html': '=',
             'text': ''
         };
@@ -1158,6 +1166,20 @@ var Drop;
     Drop.ProcessorDefinition = ProcessorDefinition;
 
     /**
+    * Create definition of a component
+    */
+    var ComponentDefinition = (function (_super) {
+        __extends(ComponentDefinition, _super);
+        function ComponentDefinition(name, oninitialize, onchange) {
+            _super.call(this, 'component', name, oninitialize, onchange);
+            this.oninitialize = oninitialize;
+            this.onchange = onchange;
+        }
+        return ComponentDefinition;
+    })(DecoratorDefinition);
+    Drop.ComponentDefinition = ComponentDefinition;
+
+    /**
     * DecoratorTarget
     *
     */
@@ -1166,6 +1188,7 @@ var Drop;
             this._start = document.createComment('start');
             this._end = document.createComment('end');
             this.initialized = false;
+            this._ensureHandlers = [];
             if (startNode) {
                 this.initialize(startNode, endNode);
             }
@@ -1191,7 +1214,12 @@ var Drop;
             var parentNode = startNode.parentNode;
             parentNode.insertBefore(this._start, startNode);
             parentNode.insertBefore(this._end, endNode.nextSibling);
+
+            // TODO:
+            // <drop:wrapper></drop:wrapper>
             this.initialized = true;
+
+            this._ensure();
         };
 
         DecoratorTarget.prototype.dispose = function () {
@@ -1214,8 +1242,14 @@ var Drop;
             nodes.forEach(function (node) {
                 return parentNode.removeChild(node);
             });
+
+            this._ensureHandlers = [];
         };
 
+        /**
+        * remove this target from DOM tree and insert an marker comment.
+        * see also append()
+        */
         DecoratorTarget.prototype.remove = function () {
             if (this._tempParentNode) {
                 return;
@@ -1247,6 +1281,10 @@ var Drop;
             this._removedMarker = removedMarker;
         };
 
+        /**
+        * append the target back to DOM tree.
+        * see also remove()
+        */
         DecoratorTarget.prototype.append = function () {
             var tempParentNode = this._tempParentNode;
             if (!tempParentNode) {
@@ -1278,12 +1316,59 @@ var Drop;
                     break;
                 }
 
-                if (node instanceof Comment) {
+                if (node instanceof Comment || node.tagName == 'DROP:COMPONENT') {
                     continue;
                 }
 
                 handler(node, i++);
             }
+        };
+
+        DecoratorTarget.prototype._ensure = function (nodes) {
+            var _this = this;
+            var handlers = this._ensureHandlers;
+
+            if (nodes) {
+                handlers.forEach(function (handler) {
+                    nodes.forEach(function (node) {
+                        if (node instanceof Comment || node.tagName == 'DROP:COMPONENT') {
+                            return;
+                        }
+                        handler(node);
+                    });
+                });
+            } else {
+                handlers.forEach(function (handler) {
+                    _this.each(function (node) {
+                        return handler(node);
+                    });
+                });
+            }
+        };
+
+        /**
+        * ensure the handler will be called on every node, including nodes added later.
+        * calling ensure the second time will remove the previous handler,
+        * so every decorator has one single ensure handler that will be triggered
+        * at the same time only.
+        */
+        DecoratorTarget.prototype.ensure = function (handler, decorator) {
+            var prevHandler = decorator['_targetEnsureHandler'];
+            var handlers = this._ensureHandlers;
+
+            if (prevHandler) {
+                var index = handlers.indexOf(prevHandler);
+                if (index >= 0) {
+                    handlers.splice(index, 1);
+                }
+            }
+
+            this.each(function (node) {
+                return handler(node);
+            });
+
+            decorator['_targetEnsureHandler'] = handler;
+            handlers.push(handler);
         };
 
         DecoratorTarget.prototype.replaceWith = function (nodes) {
@@ -1299,14 +1384,18 @@ var Drop;
                 prevNodes.push(node);
             }
 
+            var replaced = document.createDocumentFragment();
+
             prevNodes.forEach(function (node) {
-                return parentNode.removeChild(node);
+                return replaced.appendChild(node);
             });
 
             var fragment;
+            var nodesArray;
 
             if (nodes instanceof DocumentFragment) {
                 fragment = nodes;
+                nodesArray = slice.call(nodes);
             } else {
                 if (!(nodes instanceof Array || nodes instanceof NodeList)) {
                     nodes = nodes ? [nodes] : [];
@@ -1314,27 +1403,36 @@ var Drop;
 
                 fragment = document.createDocumentFragment();
 
-                nodes = slice.call(nodes);
-                nodes.forEach(function (node) {
+                nodesArray = slice.call(nodes);
+                nodesArray.forEach(function (node) {
                     fragment.appendChild(node);
                 });
             }
 
             parentNode.insertBefore(fragment, this._end);
+
+            this._ensure(nodesArray);
+
+            return replaced;
         };
 
-        DecoratorTarget.prototype.insertBefore = function (newChild, refChild) {
+        DecoratorTarget.prototype.insertBefore = function (child, refChild) {
             var parentNode = this._start.parentNode;
 
             if (refChild && refChild.parentNode != parentNode) {
                 refChild = null;
             }
 
-            parentNode.insertBefore(newChild, refChild || this._end);
+            var nodes = child instanceof DocumentFragment ? slice.call(child.childNodes) : [child];
+
+            parentNode.insertBefore(child, refChild || this._end);
+
+            this._ensure(nodes);
         };
 
         DecoratorTarget.prototype.appendChild = function (child) {
             this.insertBefore(child, null);
+            // already called _ensure in insertBefore
         };
         return DecoratorTarget;
     })();
@@ -1392,6 +1490,14 @@ var Drop;
             configurable: true
         });
 
+        Object.defineProperty(Decorator.prototype, "parsedExpression", {
+            get: function () {
+                return !this._isValue && this._isCompound ? this._compoundExpression : null;
+            },
+            enumerable: true,
+            configurable: true
+        });
+
         Object.defineProperty(Decorator.prototype, "expressionKeys", {
             get: function () {
                 return this._expressionKeys;
@@ -1440,25 +1546,18 @@ var Drop;
                     dependencies = sInfo.dependencies;
                 }
             } else if (this._isCompound) {
-                var expression = this._expression;
-
-                var value;
-                try  {
-                    value = Drop.globalEval('"use strict";(' + expression + ')');
-                } catch (e) {
-                    if (e instanceof SyntaxError) {
-                        throw new Error('[drop] expression syntax error: ' + e.message);
-                    }
-                }
-
-                var eInfo = this._getExpressionDependenciesInfo(expression);
+                var eInfo = this._getExpressionDependenciesInfo(this._expression);
                 this._compoundExpression = eInfo.expressionWithFullKeys;
                 scopeDependencies = eInfo.scopeDependencies;
                 dependencies = eInfo.dependencies;
 
                 if (!dependencies.length && !scopeDependencies.length) {
                     this._isValue = true;
-                    this._value = value;
+                    try  {
+                        this._value = Drop.globalEval('"use strict";(' + this._compoundExpression + ')');
+                    } catch (e) {
+                        errorNextTick(new Error('[drop] expression error: ' + e.message));
+                    }
                 }
             } else {
                 var expKeys = this._expressionKeys.concat();
@@ -1482,6 +1581,7 @@ var Drop;
                     try  {
                         this._value = Drop.globalEval('"use strict";(' + this._expression + ')');
                     } catch (e) {
+                        errorNextTick(new Error('[drop] expression error: ' + e.message));
                     }
                 }
             }
@@ -1521,15 +1621,19 @@ var Drop;
             // change type other than set may change the index of the data in an array.
             // if two of them happen synchronously, it might cause incorrect id keys as
             // all decorators including modifiers are handling these changes asynchronously.
-            if (sync || arg.changeType != 0 /* set */) {
+            if (sync || arg && arg.changeType != 0 /* set */) {
                 var definition = this.definition;
                 definition.invoke(this, [arg]);
                 return;
             }
 
             var args = this._pendingChangeDataArgs;
+
             if (args) {
-                args.push(arg);
+                // if no arg, there's no need to invoke another change.
+                if (arg) {
+                    args.push(arg);
+                }
             } else {
                 var args = [arg];
                 this._pendingChangeDataArgs = args;
@@ -1630,6 +1734,7 @@ var Drop;
                     try  {
                         return Drop.globalEval('"use strict";(' + expression + ')');
                     } catch (e) {
+                        errorNextTick(new Error('[drop] expression error: ' + e.message));
                         return '';
                     }
                 }
@@ -1647,7 +1752,9 @@ var Drop;
             var hash = new StringHash();
             var scope = this.scope;
 
-            var parsed = compoundExpression.replace(compoundExpressionRegex, function (m, literal, quote, previous, expression, curlyBra) {
+            var namedAtStart = false;
+
+            var parsed = compoundExpression.replace(compoundExpressionRegex, function (m, literal, quote, beforeName, name, afterName, previous, expression, curlyBra) {
                 if (literal || previous) {
                     return m;
                 }
@@ -1656,13 +1763,26 @@ var Drop;
                     throw new SyntaxError('[drop] expression does not support object notation');
                 }
 
+                if (name) {
+                    if (beforeName != null) {
+                        namedAtStart = true;
+                        return name + ':';
+                    }
+
+                    if (namedAtStart) {
+                        return ', ' + name + ':';
+                    }
+
+                    expression = name;
+                }
+
                 var keys = expressionToKeys(expression);
                 var keysLength = getKeysLength(keys) || 1;
 
                 var fullIdKeys = scope.getFullIdKeys(keys);
 
                 if (fullIdKeys) {
-                    var fullExpression = fullIdKeys.join('.');
+                    var fullExpression = '{' + fullIdKeys.join('.') + '}';
 
                     if (fullIdKeys[0] == 'this') {
                         scopeHash.set(fullIdKeys[1]);
@@ -1672,14 +1792,17 @@ var Drop;
                         }
                     }
 
-                    return '{' + fullExpression + '}';
+                    return name ? beforeName + fullExpression + afterName : fullExpression;
                 } else {
                     // global scope
                     return m;
                 }
             });
 
-            //console.log(parsed);
+            if (namedAtStart) {
+                parsed = '{ ' + parsed + ' }';
+            }
+
             return {
                 scopeDependencies: scopeHash.keys,
                 dependencies: hash.keys,
@@ -1725,6 +1848,10 @@ var Drop;
         ArrayDataHelper.prototype.item = function (index) {
             var info = this._data.getIdKeysInfo(this._keys.concat(index.toString()));
             return createDataHelper(this._data, info.keys);
+        };
+
+        ArrayDataHelper.prototype.valueOf = function () {
+            return this._data.get(this._keys);
         };
 
         ArrayDataHelper.prototype.set = function (index, value) {
@@ -2198,6 +2325,7 @@ var Drop;
             try  {
                 return Drop.globalEval('"use strict";(' + expression + ')');
             } catch (e) {
+                errorNextTick(new Error('[drop] expression error: ' + e.message));
                 return undefined;
             }
         };
@@ -2239,7 +2367,7 @@ var Drop;
 
             fragmentDiv = fragmentDiv.cloneNode(true);
 
-            this.scope = new Scope(fragmentDiv, null, null, data);
+            this.scope = new Scope(fragmentDiv, null, null, data, []);
         }
         Template.prototype.appendTo = function (node) {
             node.appendChild(this.scope.fragment);
@@ -2280,19 +2408,25 @@ var Drop;
                     case '@':
                         // attribute
                         return '<drop type="attribute" name="' + name + '">' + expression + '</drop>';
+                    case '>':
+                        // event
+                        return '<drop type="event" name="' + name + '">' + expression + '</drop>';
                     case '#':
                         // modifier
                         return '<drop type="modifier" name="' + name + '">' + expression + '</drop>';
                     case '%':
                         // processor
                         return '<drop type="processor" name="' + name + '">' + expression + '</drop>';
+                    case '&':
+                        // component
+                        return '<drop type="component" name="' + name + '">' + expression + '</drop><drop:component></drop:component>';
                     default:
                         if (typeMarker2) {
                             // html
-                            return '<drop type="html">' + expression + '</drop><drop:wrapper></drop:wrapper>';
+                            return '<drop type="html">' + expression + '</drop><drop:component></drop:component>';
                         } else {
                             // text
-                            return '<drop type="text">' + expression + '</drop><drop:wrapper></drop:wrapper>';
+                            return '<drop type="text">' + expression + '</drop><drop:component></drop:component>';
                         }
                 }
             });
@@ -2318,7 +2452,7 @@ var Drop;
         var keys = name.split('.');
         var value = decorator.expressionValue;
 
-        decorator.target.each(function (ele) {
+        decorator.target.ensure(function (ele) {
             if (keys.length == 2) {
                 var key = keys[0];
 
@@ -2328,10 +2462,33 @@ var Drop;
             } else if (ele.setAttribute) {
                 ele.setAttribute(name, value);
             }
-        });
+        }, decorator);
     };
 
     Drop.DecoratorDefinition.register(attributeDefinition);
+
+    // >event
+    var eventDefinition = new Drop.DecoratorDefinition('event', null);
+
+    eventDefinition.oninitialize = function (decorator) {
+        var type = decorator.name;
+
+        function handler(e) {
+            var onevent = decorator.expressionValue;
+            if (typeof onevent == 'function') {
+                onevent.call(this, e, decorator.scope);
+            }
+        }
+
+        decorator.target.ensure(function (ele) {
+            ele.addEventListener(type, handler);
+        }, decorator);
+    };
+
+    eventDefinition.onchange = function (decorator, args) {
+    };
+
+    Drop.DecoratorDefinition.register(eventDefinition);
 
     // =html
     var htmlDefinition = new Drop.DecoratorDefinition('html', null);
@@ -2553,16 +2710,12 @@ var Drop;
         var value = processor.expressionValue;
         var idKeys = processor.expressionFullIdKeys;
 
-        processor.target.each(function (ele) {
+        processor.target.ensure(function (ele) {
             ele.value = value;
             ele.addEventListener('change', onchange);
             ele.addEventListener('input', onchange);
             ele.addEventListener('paste', onchange);
-        });
-
-        processor.data = {
-            onchange: onchange
-        };
+        }, processor);
 
         function onchange() {
             processor.scope.setData(idKeys, this.value);
@@ -2572,18 +2725,9 @@ var Drop;
     bindValueDefinition.onchange = function (processor, args) {
         var value = processor.expressionValue;
 
+        // no need to use ensure here because newly added element would go through ensure handler first.
         processor.target.each(function (ele) {
             ele.value = value;
-        });
-    };
-
-    bindValueDefinition.ondispose = function (processor) {
-        var onchange = processor.data.onchange;
-
-        processor.target.each(function (ele) {
-            ele.removeEventListener('change', onchange);
-            ele.removeEventListener('input', onchange);
-            ele.removeEventListener('paste', onchange);
         });
     };
 
@@ -2592,76 +2736,40 @@ var Drop;
     // %var
     var varDefinition = new Drop.ProcessorDefinition('var');
 
+    var isVariableRegex = /^[a-z$_][\w$]*$/i;
+
     varDefinition.oninitialize = function (processor) {
         var expression = processor.expression;
 
-        var index = expression.indexOf('=');
+        var name = isVariableRegex.test(expression) ? expression : null;
 
-        var name;
-        var value;
+        if (!name && processor.expressionFullIdKeys) {
+            return;
+        }
 
-        if (index < 0) {
-            name = expression.trim();
+        var scope = processor.scope;
+
+        if (name) {
+            // 1. {%var abc}
+            scope.setScopeData(name, undefined);
         } else {
-            name = expression.substr(0, index).trim();
+            // 2. {%var abc = 123}
+            var value = processor.expressionValue;
 
-            var valueExpression = expression.substr(index + 1).trim();
-            try  {
-                value = Drop.globalEval(valueExpression);
-            } catch (e) {
-                throw new e.construcotr('[drop %var] can not initialize the value of ' + name + ': ' + e.message);
+            if (!(value instanceof Object)) {
+                return;
             }
-        }
 
-        if (!/^[a-z$_][\w$]*$/i.test(name)) {
-            throw new SyntaxError('[drop %var] invalid variable name "' + name + '"');
+            Object.keys(value).forEach(function (name) {
+                return scope.setScopeData(name, value[name]);
+            });
         }
-
-        processor.scope.setScopeData(name, value);
     };
 
     varDefinition.onchange = function (processor, args) {
     };
 
     Drop.DecoratorDefinition.register(varDefinition);
-
-    // %click
-    var clickDefinition = new Drop.ProcessorDefinition('click');
-
-    clickDefinition.oninitialize = function (processor) {
-        var handler;
-
-        if (processor.data) {
-            handler = processor.data.handler;
-        } else {
-            handler = function (e) {
-                var onclick = processor.expressionValue;
-                if (typeof onclick == 'function') {
-                    onclick.call(this, e, processor.scope);
-                }
-            };
-            processor.data = {
-                handler: handler
-            };
-        }
-
-        processor.target.each(function (ele) {
-            ele.addEventListener('click', handler);
-        });
-    };
-
-    clickDefinition.onchange = function (processor, args) {
-    };
-
-    clickDefinition.ondispose = function (processor) {
-        var handler = processor.data.handler;
-
-        processor.target.each(function (ele) {
-            ele.removeEventListener('click', handler);
-        });
-    };
-
-    Drop.DecoratorDefinition.register(clickDefinition);
 
     // %click-toggle
     var clickToggleDefinition = new Drop.ProcessorDefinition('click-toggle');
@@ -2680,19 +2788,12 @@ var Drop;
             }
         };
 
-        processor.target.each(function (ele) {
+        processor.target.ensure(function (ele) {
             ele.addEventListener('click', processor.data.onclick);
-        });
+        }, processor);
     };
 
     clickToggleDefinition.onchange = function (processor, args) {
-    };
-
-    clickToggleDefinition.ondispose = function (processor) {
-        var onclick = processor.data.onclick;
-        processor.target.each(function (ele) {
-            ele.removeEventListener('click', onclick);
-        });
     };
 
     Drop.DecoratorDefinition.register(clickToggleDefinition);
@@ -2700,10 +2801,17 @@ var Drop;
     // %show
     var showDefinition = new Drop.ProcessorDefinition('show');
 
+    showDefinition.oninitialize = function (processor) {
+        var value = processor.expressionValue;
+
+        processor.target.ensure(function (ele) {
+            ele.style.display = value ? '' : 'none';
+        }, processor);
+    };
+
     showDefinition.onchange = function (processor, args) {
         var value = processor.expressionValue;
 
-        //debugger;
         processor.target.each(function (ele) {
             ele.style.display = value ? '' : 'none';
         });
@@ -2725,6 +2833,58 @@ var Drop;
     };
 
     Drop.DecoratorDefinition.register(ifDefinition);
+
+    // &input
+    var inputDefinition = new Drop.ComponentDefinition('input');
+
+    var bindIdKeysRegex = /(?:\{|,)\s*value:\s*\{([^}]+)\}/;
+
+    inputDefinition.oninitialize = function (component) {
+        var value;
+        var idKeys = component.expressionFullIdKeys;
+
+        if (idKeys) {
+            value = component.expressionValue;
+        } else {
+            var expression = component.parsedExpression;
+            var groups = expression && expression.match(bindIdKeysRegex);
+
+            if (!groups) {
+                debugger;
+                throw new TypeError('[drop &input] unable to bind value to expression "' + component.expression + '"');
+            }
+
+            idKeys = groups[1].split('.');
+            value = component.expressionValue.value;
+        }
+
+        var input = document.createElement('input');
+
+        component.target.replaceWith(input);
+
+        component.target.ensure(function (ele) {
+            ele.value = value;
+            ele.addEventListener('change', onchange);
+            ele.addEventListener('input', onchange);
+            ele.addEventListener('paste', onchange);
+        }, component);
+
+        function onchange() {
+            component.scope.setData(idKeys, this.value);
+        }
+    };
+
+    inputDefinition.onchange = function (processor, args) {
+        var value = processor.expressionValue;
+        value = value instanceof Object ? value.value : value;
+
+        // no need to use ensure here because newly added element would go through ensure handler first.
+        processor.target.each(function (ele) {
+            ele.value = value;
+        });
+    };
+
+    Drop.DecoratorDefinition.register(inputDefinition);
 })(Drop || (Drop = {}));
 /// <reference path="lib/drop.ts" />
 /// <reference path="lib/decorators.ts" />

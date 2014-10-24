@@ -12,7 +12,7 @@ To start with, I need to point out that DropJS is in its very first period. Thou
     <p>{intro}</p>
 
     {#each matrix}
-    {%click onRowClick}
+    {>click onRowClick}
     {@style "color: {matrixColor};"}
     <div>
         {index + 1}.

@@ -4,9 +4,9 @@ interface Element {
     getElementsByTagName(name: 'drop'): NodeListOf<DropElement>;
 }
 
-'use strict';
-
 module Drop {
+    'use strict';
+
     export var globalEval = eval;
 
     //#region Utils
@@ -446,10 +446,9 @@ module Drop {
     //    ].join('|'), 'g');
     //#endregion
 
-    var decoratorTypeRegex = /^(?:attribute|text|html|modifier|processor)$/;
     var decoratorNameRegex = /^-?[a-z](?:\.?-?[a-z][\w]*)*$/;
     var preprocessRegex =
-        /(<!--(?:(?!-->)[\s\S])*-->)|(\\\\|\\\{)|\{(?:([@#%])(-?[a-z](?:\.?-?[a-z][\w]*)*)(?:\s+|(?=\}))|(=)?)(?:((?:\\\\|\\\}|(["'])(?:(?!\7|[\r\n\u2028\u2029\\])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:[\r\n\u2028\u2029]|\r\n))*\7|(?:\/(?:[^\r\n\u2028\u2029*/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])(?:[^\r\n\u2028\u2029/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])*\/[gimy]{0,4})|[^}])*))?\}/ig;
+        /(<!--(?:(?!-->)[\s\S])*-->)|(\\\\|\\\{)|\{(?:([@>#%&])(-?[a-z](?:\.?-?[a-z][\w]*)*)(?:\s+|(?=\}))|(=)?)(?:((?:\\\\|\\\}|(["'])(?:(?!\7|[\r\n\u2028\u2029\\])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:[\r\n\u2028\u2029]|\r\n))*\7|(?:\/(?:[^\r\n\u2028\u2029*/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])(?:[^\r\n\u2028\u2029/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])*\/[gimy]{0,4})|[^}])*))?\}/ig;
     var indexOrIdRegex = /^:?\d+$/;
     var indexRegex = /\[([^\]]*)\]/g;
     var keyPathTailRegex = /(?:\.|^)[^.]+$/;
@@ -457,7 +456,7 @@ module Drop {
     var expressionInStringRegex = /(\\\\|\\\{|\\\})|\{((?:[a-z$_][\w$]*|:\d+)(?:\.(?:[a-z$_][\w$]*|:\d+)|\[\d+\])*)\}/ig;
 
     var isExpressionRegex = /^(?:[a-z$_][\w$]*)(?:\.[a-z$_][\w$]*)*$/i;
-    var compoundExpressionRegex = /(\b(?:typeof|instanceof|new|null|true|false)\b|(["'])(?:(?!\2|[\r\n\u2028\u2029\\])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:[\r\n\u2028\u2029]|\r\n))*\2|(?:(?:(?:0|[1-9]\d*)(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?|0[xX][\da-fA-F]+)|(?:\/(?:[^\r\n\u2028\u2029*/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])(?:[^\r\n\u2028\u2029/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])*\/[gimy]{0,4}))|(\.\s*)?([a-zA-Z$_][\w$_]*(?:\s*\.\s*[a-zA-Z$_][\w$_]*)*)(?!\s*[\(\w$_])|(\{)/g;
+    var compoundExpressionRegex = /(\b(?:typeof|instanceof|new|null|true|false)\b|(["'])(?:(?!\2|[\r\n\u2028\u2029\\])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:[\r\n\u2028\u2029]|\r\n))*\2|(?:(?:(?:0|[1-9]\d*)(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?|0[xX][\da-fA-F]+)|(?:\/(?:[^\r\n\u2028\u2029*/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])(?:[^\r\n\u2028\u2029/\[\\]|\\[^\r\n\u2028\u2029]|\[(?:[^\r\n\u2028\u2029\]\\]|\\[^\r\n\u2028\u2029])*\])*\/[gimy]{0,4}))|(?:(^\s*)|\s*)([a-zA-Z$_][\w$_]*)(\s*=(?!=))|(\.\s*)?([a-zA-Z$_][\w$_]*(?:\s*\.\s*[a-zA-Z$_][\w$_]*)*)(?!\s*\(|[\w$_])|(\{)/g;
     var expressionInParsedCompoundRegex = /(["'])(?:(?!\1|[\r\n\u2028\u2029\\])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:[\r\n\u2028\u2029]|\r\n))*\1|\{((?:[\w$]+|:\d+)(?:\.(?:[\w$]+|:\d+))*)\}/ig;
     var escapedRegex = /\\(\\|\{|\})/g;
 
@@ -1013,7 +1012,9 @@ module Drop {
     export class DecoratorDefinition {
         private static _modifiersMap = new StringMap<DecoratorDefinition>();
         private static _processorsMap = new StringMap<DecoratorDefinition>();
+        private static _componentsMap = new StringMap<DecoratorDefinition>();
         private static _attribute: DecoratorDefinition;
+        private static _event: DecoratorDefinition;
         private static _text: DecoratorDefinition;
         private static _html: DecoratorDefinition;
 
@@ -1024,11 +1025,6 @@ module Drop {
             public onchange?: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void,
             public ondispose?: (decorator: Decorator) => void
             ) {
-
-            if (!decoratorTypeRegex.test(type)) {
-                throw new TypeError('[drop] invalid decorator type "' + type + '"');
-            }
-
             if (!decoratorNameRegex.test(name)) {
                 throw new TypeError('[drop] invalid decorator name "' + name + '"');
             }
@@ -1090,8 +1086,14 @@ module Drop {
                 case 'processor':
                     DecoratorDefinition._processorsMap.set(decorator.name, decorator);
                     break;
+                case 'component':
+                    DecoratorDefinition._componentsMap.set(decorator.name, decorator);
+                    break;
                 case 'attribute':
                     DecoratorDefinition._attribute = decorator;
+                    break;
+                case 'event':
+                    DecoratorDefinition._event = decorator;
                     break;
                 case 'html':
                     DecoratorDefinition._html = decorator;
@@ -1110,8 +1112,12 @@ module Drop {
                     return DecoratorDefinition._modifiersMap.get(name);
                 case 'processor':
                     return DecoratorDefinition._processorsMap.get(name);
+                case 'component':
+                    return DecoratorDefinition._componentsMap.get(name);
                 case 'attribute':
                     return DecoratorDefinition._attribute;
+                case 'event':
+                    return DecoratorDefinition._event;
                 case 'html':
                     return DecoratorDefinition._html;
                 case 'text':
@@ -1125,6 +1131,8 @@ module Drop {
             'modifier': '#',
             'processor': '%',
             'attribute': '@',
+            'event': '>',
+            'component': '&',
             'html': '=',
             'text': ''
         };
@@ -1171,6 +1179,24 @@ module Drop {
     }
 
     /**
+     * Create definition of a component
+     */
+
+    export class ComponentDefinition extends DecoratorDefinition {
+        constructor(
+            name: string,
+            public oninitialize?: (decorator: Decorator) => void,
+            public onchange?: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void
+            ) {
+            super('component', name, oninitialize, onchange);
+        }
+    }
+
+    export interface IDecoratorTargetEnsureHandler {
+        (node: HTMLElement): void;
+    }
+
+    /**
      * DecoratorTarget
      * 
      */
@@ -1201,7 +1227,13 @@ module Drop {
             var parentNode = startNode.parentNode;
             parentNode.insertBefore(this._start, startNode);
             parentNode.insertBefore(this._end, endNode.nextSibling);
+            
+            // TODO:
+            // <drop:wrapper></drop:wrapper>
+
             this.initialized = true;
+
+            this._ensure();
         }
 
         dispose() {
@@ -1222,8 +1254,14 @@ module Drop {
             } while (node = node.nextSibling);
 
             nodes.forEach(node => parentNode.removeChild(node));
+
+            this._ensureHandlers = [];
         }
 
+        /**
+         * remove this target from DOM tree and insert an marker comment.
+         * see also append()
+         */
         remove() {
             if (this._tempParentNode) {
                 return;
@@ -1253,6 +1291,10 @@ module Drop {
             this._removedMarker = removedMarker;
         }
 
+        /**
+         * append the target back to DOM tree.
+         * see also remove()
+         */
         append() {
             var tempParentNode = this._tempParentNode;
             if (!tempParentNode) {
@@ -1284,7 +1326,7 @@ module Drop {
                     break;
                 }
 
-                if (node instanceof Comment) {
+                if (node instanceof Comment || (<HTMLElement>node).tagName == 'DROP:COMPONENT') {
                     continue;
                 }
 
@@ -1292,11 +1334,55 @@ module Drop {
             }
         }
 
-        replaceWith(fragment: DocumentFragment);
-        replaceWith(node: Node);
-        replaceWith(nodes: NodeList);
-        replaceWith(nodes: Node[]);
-        replaceWith(nodes: any) {
+        private _ensureHandlers: IDecoratorTargetEnsureHandler[] = [];
+
+        private _ensure(nodes?: Node[]) {
+            var handlers = this._ensureHandlers;
+
+            if (nodes) {
+                handlers.forEach(handler => {
+                    nodes.forEach(node => {
+                        if (node instanceof Comment || (<HTMLElement>node).tagName == 'DROP:COMPONENT') {
+                            return;
+                        }
+                        handler(<any>node);
+                    });
+                });
+            } else {
+                handlers.forEach(handler => {
+                    this.each(node => handler(node));
+                });
+            }
+        }
+        
+        /**
+         * ensure the handler will be called on every node, including nodes added later.
+         * calling ensure the second time will remove the previous handler,
+         * so every decorator has one single ensure handler that will be triggered
+         * at the same time only.
+         */
+        ensure(handler: (node: HTMLElement) => void, decorator: Decorator) {
+            var prevHandler = decorator['_targetEnsureHandler'];
+            var handlers = this._ensureHandlers;
+
+            if (prevHandler) {
+                var index = handlers.indexOf(prevHandler);
+                if (index >= 0) {
+                    handlers.splice(index, 1);
+                }
+            }
+
+            this.each(node => handler(node));
+
+            decorator['_targetEnsureHandler'] = handler;
+            handlers.push(handler);
+        }
+
+        replaceWith(fragment: DocumentFragment): DocumentFragment;
+        replaceWith(node: Node): DocumentFragment;
+        replaceWith(nodes: NodeList): DocumentFragment;
+        replaceWith(nodes: Node[]): DocumentFragment;
+        replaceWith(nodes: any): DocumentFragment {
             var prevNodes: Node[] = [];
             var node = this._start;
             var parentNode = node.parentNode;
@@ -1309,12 +1395,16 @@ module Drop {
                 prevNodes.push(node);
             }
 
-            prevNodes.forEach(node => parentNode.removeChild(node));
+            var replaced = document.createDocumentFragment();
+
+            prevNodes.forEach(node => replaced.appendChild(node));
 
             var fragment: Node;
+            var nodesArray: Node[];
 
             if (nodes instanceof DocumentFragment) {
                 fragment = nodes;
+                nodesArray = slice.call(nodes);
             } else {
                 if (!(nodes instanceof Array || nodes instanceof NodeList)) {
                     nodes = nodes ? [nodes] : [];
@@ -1322,27 +1412,38 @@ module Drop {
 
                 fragment = document.createDocumentFragment();
 
-                nodes = slice.call(nodes);
-                (<Node[]>nodes).forEach(node => {
+                nodesArray = slice.call(nodes);
+                nodesArray.forEach(node => {
                     fragment.appendChild(node);
                 });
             }
 
             parentNode.insertBefore(fragment, this._end);
+
+            this._ensure(nodesArray);
+
+            return replaced;
         }
 
-        insertBefore(newChild: Node, refChild: Node) {
+        insertBefore(child: Node, refChild: Node) {
             var parentNode = this._start.parentNode;
 
             if (refChild && refChild.parentNode != parentNode) {
                 refChild = null;
             }
 
-            parentNode.insertBefore(newChild, refChild || this._end);
+            var nodes: Node[] = child instanceof DocumentFragment ?
+                slice.call(child.childNodes) : [child];
+
+            parentNode.insertBefore(child, refChild || this._end);
+
+            this._ensure(nodes);
         }
 
         appendChild(child: Node) {
             this.insertBefore(child, null);
+
+            // already called _ensure in insertBefore
         }
     }
 
@@ -1375,6 +1476,10 @@ module Drop {
         private _expression: string;
         get expression(): string {
             return this._expression;
+        }
+
+        get parsedExpression(): string {
+            return !this._isValue && this._isCompound ? this._compoundExpression : null;
         }
 
         private _expressionKeys: string[];
@@ -1460,25 +1565,18 @@ module Drop {
                     dependencies = sInfo.dependencies;
                 }
             } else if (this._isCompound) {
-                var expression = this._expression;
-
-                var value: any;
-                try {
-                    value = globalEval('"use strict";(' + expression + ')');
-                } catch (e) {
-                    if (e instanceof SyntaxError) {
-                        throw new Error('[drop] expression syntax error: ' + e.message);
-                    }
-                }
-
-                var eInfo = this._getExpressionDependenciesInfo(expression);
+                var eInfo = this._getExpressionDependenciesInfo(this._expression);
                 this._compoundExpression = eInfo.expressionWithFullKeys;
                 scopeDependencies = eInfo.scopeDependencies;
                 dependencies = eInfo.dependencies;
 
                 if (!dependencies.length && !scopeDependencies.length) {
                     this._isValue = true;
-                    this._value = value;
+                    try {
+                        this._value = globalEval('"use strict";(' + this._compoundExpression + ')');
+                    } catch (e) {
+                        errorNextTick(new Error('[drop] expression error: ' + e.message));
+                    }
                 }
             } else {
                 var expKeys = this._expressionKeys.concat();
@@ -1501,7 +1599,9 @@ module Drop {
 
                     try {
                         this._value = globalEval('"use strict";(' + this._expression + ')');
-                    } catch (e) { }
+                    } catch (e) {
+                        errorNextTick(new Error('[drop] expression error: ' + e.message));
+                    }
                 }
             }
 
@@ -1540,15 +1640,19 @@ module Drop {
             // change type other than set may change the index of the data in an array.
             // if two of them happen synchronously, it might cause incorrect id keys as
             // all decorators including modifiers are handling these changes asynchronously.
-            if (sync || arg.changeType != DataChangeType.set) {
+            if (sync || arg && arg.changeType != DataChangeType.set) {
                 var definition = this.definition;
                 definition.invoke(this, [arg]);
                 return;
             }
 
             var args = this._pendingChangeDataArgs;
+
             if (args) {
-                args.push(arg);
+                // if no arg, there's no need to invoke another change.
+                if (arg) {
+                    args.push(arg);
+                }
             } else {
                 var args = [arg];
                 this._pendingChangeDataArgs = args;
@@ -1647,6 +1751,7 @@ module Drop {
                         try {
                             return globalEval('"use strict";(' + expression + ')');
                         } catch (e) {
+                            errorNextTick(new Error('[drop] expression error: ' + e.message));
                             return '';
                         }
                     }
@@ -1664,11 +1769,16 @@ module Drop {
             var hash = new StringHash();
             var scope = this.scope;
 
+            var namedAtStart = false;
+
             var parsed = compoundExpression.replace(compoundExpressionRegex,
                 (
                     m: string,
                     literal: string,
                     quote: string,
+                    beforeName: string,
+                    name: string,
+                    afterName: string,
                     previous: string,
                     expression: string,
                     curlyBra: string
@@ -1682,13 +1792,26 @@ module Drop {
                         throw new SyntaxError('[drop] expression does not support object notation');
                     }
 
+                    if (name) {
+                        if (beforeName != null) {
+                            namedAtStart = true;
+                            return name + ':';
+                        }
+
+                        if (namedAtStart) {
+                            return ', ' + name + ':';
+                        }
+
+                        expression = name;
+                    }
+
                     var keys = expressionToKeys(expression);
                     var keysLength = getKeysLength(keys) || 1;
 
                     var fullIdKeys = scope.getFullIdKeys(keys);
 
                     if (fullIdKeys) {
-                        var fullExpression = fullIdKeys.join('.');
+                        var fullExpression = '{' + fullIdKeys.join('.') + '}';
 
                         if (fullIdKeys[0] == 'this') {
                             scopeHash.set(fullIdKeys[1]);
@@ -1698,14 +1821,18 @@ module Drop {
                             }
                         }
 
-                        return '{' + fullExpression + '}';
+                        return name ?
+                            beforeName + fullExpression + afterName :
+                            fullExpression;
                     } else {
                         // global scope
                         return m;
                     }
                 });
 
-            //console.log(parsed);
+            if (namedAtStart) {
+                parsed = '{ ' + parsed + ' }';
+            }
 
             return {
                 scopeDependencies: scopeHash.keys,
@@ -1746,12 +1873,16 @@ module Drop {
             this._data.remove(this._keys, length, Infinity);
         }
 
-        item(index: number): any {
+        item<Value>(index: number): Value {
             var info = this._data.getIdKeysInfo(this._keys.concat(index.toString()));
             return createDataHelper(this._data, info.keys);
         }
 
-        set(index: number, value: any) {
+        valueOf<Value>(): Value{
+            return this._data.get<Value>(this._keys);
+        }
+
+        set<Value>(index: number, value: Value) {
             this._data.set(this._keys.concat(index.toString()), value);
         }
 
@@ -2218,6 +2349,7 @@ module Drop {
             try {
                 return globalEval('"use strict";(' + expression + ')');
             } catch (e) {
+                errorNextTick(new Error('[drop] expression error: ' + e.message));
                 return undefined;
             }
         }
@@ -2262,7 +2394,7 @@ module Drop {
 
             fragmentDiv = <HTMLDivElement>fragmentDiv.cloneNode(true);
 
-            this.scope = new Scope(fragmentDiv, null, null, data);
+            this.scope = new Scope(fragmentDiv, null, null, data, []);
         }
 
         appendTo(node: Node) {
@@ -2317,19 +2449,25 @@ module Drop {
                         case '@':
                             // attribute
                             return '<drop type="attribute" name="' + name + '">' + expression + '</drop>';
+                        case '>':
+                            // event
+                            return '<drop type="event" name="' + name + '">' + expression + '</drop>';
                         case '#':
                             // modifier
                             return '<drop type="modifier" name="' + name + '">' + expression + '</drop>';
                         case '%':
                             // processor
                             return '<drop type="processor" name="' + name + '">' + expression + '</drop>';
+                        case '&':
+                            // component
+                            return '<drop type="component" name="' + name + '">' + expression + '</drop><drop:component></drop:component>';
                         default:
                             if (typeMarker2) {
                                 // html
-                                return '<drop type="html">' + expression + '</drop><drop:wrapper></drop:wrapper>';
+                                return '<drop type="html">' + expression + '</drop><drop:component></drop:component>';
                             } else {
                                 // text
-                                return '<drop type="text">' + expression + '</drop><drop:wrapper></drop:wrapper>';
+                                return '<drop type="text">' + expression + '</drop><drop:component></drop:component>';
                             }
                     }
                 });

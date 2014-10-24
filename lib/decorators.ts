@@ -9,7 +9,7 @@
         var keys = name.split('.');
         var value = decorator.expressionValue;
 
-        decorator.target.each((ele: HTMLElement) => {
+        decorator.target.ensure(ele => {
             if (keys.length == 2) {
                 var key = keys[0];
 
@@ -19,10 +19,33 @@
             } else if (ele.setAttribute) {
                 ele.setAttribute(name, value);
             }
-        });
+        }, decorator);
     };
 
     DecoratorDefinition.register(attributeDefinition);
+
+    // >event
+
+    var eventDefinition = new DecoratorDefinition('event', null);
+
+    eventDefinition.oninitialize = decorator => {
+        var type = decorator.name;
+
+        function handler(e: MouseEvent) {
+            var onevent = decorator.expressionValue;
+            if (typeof onevent == 'function') {
+                onevent.call(this, e, decorator.scope);
+            }
+        }
+
+        decorator.target.ensure(ele => {
+            ele.addEventListener(type, handler);
+        }, decorator);
+    };
+
+    eventDefinition.onchange = (decorator, args) => { };
+
+    DecoratorDefinition.register(eventDefinition);
 
     // =html
 
@@ -252,16 +275,12 @@
         var value = processor.expressionValue;
         var idKeys = processor.expressionFullIdKeys;
 
-        processor.target.each(ele => {
-            (<any>ele).value = value;
+        processor.target.ensure(ele => {
+            (<HTMLInputElement>ele).value = value;
             (<HTMLElement>ele).addEventListener('change', onchange);
             (<HTMLElement>ele).addEventListener('input', onchange);
             (<HTMLElement>ele).addEventListener('paste', onchange);
-        });
-
-        processor.data = {
-            onchange: onchange
-        };
+        }, processor);
 
         function onchange() {
             processor.scope.setData(idKeys, this.value);
@@ -271,18 +290,9 @@
     bindValueDefinition.onchange = (processor, args) => {
         var value = processor.expressionValue;
 
+        // no need to use ensure here because newly added element would go through ensure handler first.
         processor.target.each(ele => {
-            (<any>ele).value = value;
-        });
-    };
-
-    bindValueDefinition.ondispose = processor => {
-        var onchange = processor.data.onchange;
-
-        processor.target.each(ele => {
-            (<HTMLElement>ele).removeEventListener('change', onchange);
-            (<HTMLElement>ele).removeEventListener('input', onchange);
-            (<HTMLElement>ele).removeEventListener('paste', onchange);
+            (<HTMLInputElement>ele).value = value;
         });
     };
 
@@ -292,75 +302,39 @@
 
     var varDefinition = new ProcessorDefinition('var');
 
-    varDefinition.oninitialize = (processor) => {
+    var isVariableRegex = /^[a-z$_][\w$]*$/i;
+
+    varDefinition.oninitialize = processor => {
         var expression = processor.expression;
 
-        var index = expression.indexOf('=');
+        var name = isVariableRegex.test(expression) ? expression : null;
 
-        var name: string;
-        var value: any;
-        
-        if (index < 0) {
-            name = expression.trim();
+        if (!name && processor.expressionFullIdKeys) {
+            return;
+        }
+
+        var scope = processor.scope
+
+        if (name) {
+            // 1. {%var abc}
+            scope.setScopeData(name, undefined);
         } else {
-            name = expression.substr(0, index).trim();
+            // 2. {%var abc = 123}
+            var value = processor.expressionValue;
 
-            var valueExpression = expression.substr(index + 1).trim();
-            try {
-                value = globalEval(valueExpression);
-            } catch (e) {
-                throw new e.construcotr('[drop %var] can not initialize the value of ' + name + ': ' + e.message);
+            if (!(value instanceof Object)) {
+                return;
             }
-        }
 
-        if (!/^[a-z$_][\w$]*$/i.test(name)) {
-            throw new SyntaxError('[drop %var] invalid variable name "' + name + '"');
+            Object
+                .keys(value)
+                .forEach(name => scope.setScopeData(name, value[name]));
         }
-
-        processor.scope.setScopeData(name, value);
     };
 
     varDefinition.onchange = (processor, args) => { };
 
     DecoratorDefinition.register(varDefinition);
-
-    // %click
-
-    var clickDefinition = new ProcessorDefinition('click');
-
-    clickDefinition.oninitialize = processor => {
-        var handler: (e: MouseEvent) => any;
-
-        if (processor.data) {
-            handler = processor.data.handler;
-        } else {
-            handler = function (e) {
-                var onclick = processor.expressionValue;
-                if (typeof onclick == 'function') {
-                    onclick.call(this, e, processor.scope);
-                }
-            };
-            processor.data = {
-                handler: handler
-            };
-        }
-
-        processor.target.each(ele => {
-            ele.addEventListener('click', handler);
-        });
-    };
-
-    clickDefinition.onchange = (processor, args) => { };
-
-    clickDefinition.ondispose = (processor) => {
-        var handler = processor.data.handler;
-
-        processor.target.each(ele => {
-            ele.removeEventListener('click', handler);
-        });
-    };
-
-    DecoratorDefinition.register(clickDefinition);
 
     // %click-toggle
 
@@ -380,29 +354,30 @@
             }
         };
 
-        processor.target.each(ele => {
+        processor.target.ensure(ele => {
             ele.addEventListener('click', processor.data.onclick);
-        });
+        }, processor);
     };
 
     clickToggleDefinition.onchange = (processor, args) => { };
     
-    clickToggleDefinition.ondispose = (processor) => {
-        var onclick = processor.data.onclick;
-        processor.target.each(ele => {
-            ele.removeEventListener('click', onclick);
-        });
-    };
-
     DecoratorDefinition.register(clickToggleDefinition);
 
     // %show
 
     var showDefinition = new ProcessorDefinition('show');
 
+    showDefinition.oninitialize = processor => {
+        var value = processor.expressionValue;
+
+        processor.target.ensure(ele => {
+            ele.style.display = value ? '' : 'none';
+        }, processor);
+    };
+
     showDefinition.onchange = (processor, args) => {
         var value = processor.expressionValue;
-        //debugger;
+
         processor.target.each(ele => {
             ele.style.display = value ? '' : 'none';
         });
@@ -425,4 +400,79 @@
     };
 
     DecoratorDefinition.register(ifDefinition);
+
+    // &input
+
+    var inputDefinition = new ComponentDefinition('input');
+
+    var bindIdKeysRegex = /(?:\{|,)\s*value:\s*\{([^}]+)\}/;
+
+    inputDefinition.oninitialize = component => {
+        var value: string;
+        var idKeys = component.expressionFullIdKeys;
+
+        if (idKeys) {
+            value = component.expressionValue;
+        } else {
+            var expression = component.parsedExpression;
+            var groups = expression && expression.match(bindIdKeysRegex);
+
+            if (!groups) {
+                debugger;
+                throw new TypeError('[drop &input] unable to bind value to expression "' + component.expression + '"');
+            }
+
+            idKeys = groups[1].split('.');
+            value = component.expressionValue.value;
+        }
+
+        var input = document.createElement('input');
+
+        component.target.replaceWith(input);
+
+        component.target.ensure(ele => {
+            (<HTMLInputElement>ele).value = value;
+            (<HTMLElement>ele).addEventListener('change', onchange);
+            (<HTMLElement>ele).addEventListener('input', onchange);
+            (<HTMLElement>ele).addEventListener('paste', onchange);
+        }, component);
+
+        function onchange() {
+            component.scope.setData(idKeys, this.value);
+        }
+    };
+
+    inputDefinition.onchange = (processor, args) => {
+        var value = processor.expressionValue;
+        value = value instanceof Object ? value.value : value;
+
+        // no need to use ensure here because newly added element would go through ensure handler first.
+        processor.target.each(ele => {
+            (<HTMLInputElement>ele).value = value;
+        });
+    };
+
+    DecoratorDefinition.register(inputDefinition);
+
+    // %template
+
+    //interface ITemplateProcessor extends Decorator {
+    //    data: {
+    //        fragment: DocumentFragment;
+    //    }
+    //}
+
+    //var templateDefinition = new ProcessorDefinition('template')
+
+    //templateDefinition.onchange = ((processor: ITemplateProcessor, args) => {
+        
+
+    
+
+    //});
+
+    //DecoratorDefinition.register(templateDefinition);
+
+    // >click 
+    // &component
 }

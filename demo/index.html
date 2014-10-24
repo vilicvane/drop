@@ -55,7 +55,7 @@
             {%var editEnabled = false}
             {%if intro.showIntro}
             <div class="container">
-                <!-- Intro Title -->
+                <!-- intro title -->
                 <h2>
                     {%click-toggle editEnabled}
                     <a href="javascript:;">{editEnabled ? 'Done' : 'Edit'}</a>
@@ -63,13 +63,14 @@
                 </h2>
                 {%show editEnabled}
                 <div class="form-group">
-                    {%bind-value title}
-                    <input class="form-control" type="text" />
+                    {@class "form-control"}
+                    <!-- approach no.1 -->
+                    {&input title}
                 </div>
-                <!-- Paragraphs -->
+                <!-- paragraphs -->
                 {#each paragraphs}
                 <p>
-                    {%click remove}
+                    {>click remove}
                     <a href="javascript:;">Remove</a>
                     [{paragraphIndexes[this.index] || '...'}] {this}
                 </p>
@@ -80,13 +81,14 @@
                 </div>
                 <h2>
                     New Paragraph...
-                    {%click addParagraph}
+                    {>click addParagraph}
                     <a href="javascript:;">Add</a>
                 </h2>
                 <div class="form-group">
-                    {%var newParagraphText = "New paragraph..."}
-                    {%bind-value newParagraphText}
-                    <input type="text" class="form-control" />
+                    {%var newParagraphText = 'New paragraph...'}
+                    {@class "form-control"}
+                    <!-- approach no.2 -->
+                    {&input value = newParagraphText}
                 </div>
             </div>
         </div>
@@ -105,9 +107,6 @@
             data.paragraphs.push(text);
         }
 
-        /*
-            Soon I will add a data helper class (maybe DataHelper) to deal with data manipulation.
-        */
         var data = new Drop.Data({
             title: 'Drop',
             navLinks: [
