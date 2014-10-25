@@ -97,6 +97,7 @@ declare module Drop {
         private static _event;
         private static _text;
         private static _html;
+        public skipExpessionParsing: boolean;
         constructor(type: string, name: string, oninitialize?: (decorator: Decorator) => void, onchange?: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void, ondispose?: (decorator: Decorator) => void);
         public initialize(decorator: Decorator): void;
         public change(decorator: Decorator, args: IDataChangeEventData<any>[]): void;
@@ -261,7 +262,7 @@ declare module Drop {
         private static _fragmentDivsMap;
         public scope: Scope;
         constructor(tpl: string, data: Data);
-        public appendTo(node: Node): void;
+        public render(node: Node): void;
         private static _htmlEncode(text);
         static apply(templateId: string, data: Data, target: HTMLElement): Template;
         static parse(tpl: string): HTMLDivElement;

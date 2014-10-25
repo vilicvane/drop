@@ -187,6 +187,8 @@
                                 remove: remove
                             });
 
+                            console.log(subScope.fullScopeKeys);
+
                             pendingSubScopes.push(subScopes.pop());
 
                             var comment = document.createComment(subScope.fullScopeKeys.join('.'));
@@ -302,6 +304,8 @@
 
     var varDefinition = new ProcessorDefinition('var');
 
+    varDefinition.skipExpessionParsing = true;
+
     var isVariableRegex = /^[a-z$_][\w$]*$/i;
 
     varDefinition.oninitialize = processor => {
@@ -332,8 +336,6 @@
         }
     };
 
-    varDefinition.onchange = (processor, args) => { };
-
     DecoratorDefinition.register(varDefinition);
 
     // %click-toggle
@@ -358,8 +360,6 @@
             ele.addEventListener('click', processor.data.onclick);
         }, processor);
     };
-
-    clickToggleDefinition.onchange = (processor, args) => { };
     
     DecoratorDefinition.register(clickToggleDefinition);
 
@@ -431,6 +431,10 @@
         component.target.replaceWith(input);
 
         component.target.ensure(ele => {
+            if (value === undefined) {
+                value = '';
+            }
+
             (<HTMLInputElement>ele).value = value;
             (<HTMLElement>ele).addEventListener('change', onchange);
             (<HTMLElement>ele).addEventListener('input', onchange);
@@ -445,6 +449,10 @@
     inputDefinition.onchange = (processor, args) => {
         var value = processor.expressionValue;
         value = value instanceof Object ? value.value : value;
+
+        if (value === undefined) {
+            value = '';
+        }
 
         // no need to use ensure here because newly added element would go through ensure handler first.
         processor.target.each(ele => {

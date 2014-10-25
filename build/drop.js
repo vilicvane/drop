@@ -1005,6 +1005,7 @@ var Drop;
             this.oninitialize = oninitialize;
             this.onchange = onchange;
             this.ondispose = ondispose;
+            this.skipExpessionParsing = false;
             if (!decoratorNameRegex.test(name)) {
                 throw new TypeError('[drop] invalid decorator name "' + name + '"');
             }
@@ -1017,7 +1018,7 @@ var Drop;
             try  {
                 if (this.oninitialize) {
                     this.oninitialize(decorator);
-                } else {
+                } else if (this.onchange) {
                     this.onchange(decorator, null);
                 }
             } catch (e) {
@@ -1029,7 +1030,9 @@ var Drop;
 
         DecoratorDefinition.prototype.change = function (decorator, args) {
             try  {
-                this.onchange(decorator, args);
+                if (this.onchange) {
+                    this.onchange(decorator, args);
+                }
             } catch (e) {
                 errorNextTick(e);
             }
@@ -1054,8 +1057,8 @@ var Drop;
         };
 
         DecoratorDefinition.register = function (decorator) {
-            if (!decorator.onchange) {
-                throw new TypeError('[drop] the onchange handler is required for a decorator');
+            if (!decorator.oninitialize && !decorator.onchange) {
+                throw new TypeError('[drop] at least one of oninitialize and onchange handlers is required for a decorator');
             }
 
             switch (decorator.type) {
@@ -1215,11 +1218,13 @@ var Drop;
             parentNode.insertBefore(this._start, startNode);
             parentNode.insertBefore(this._end, endNode.nextSibling);
 
-            // TODO:
-            // <drop:wrapper></drop:wrapper>
             this.initialized = true;
 
-            this._ensure();
+            if (startNode.tagName == 'DROP:WRAPPER') {
+                this.replaceWith(startNode.childNodes);
+            } else {
+                this._ensure();
+            }
         };
 
         DecoratorTarget.prototype.dispose = function () {
@@ -1448,6 +1453,8 @@ var Drop;
             this.name = name;
             this.scope = scope;
             this.initialized = false;
+            this._isValue = false;
+            this._isCompound = false;
             this._scopeListenerTypes = [];
             this._listenerTypes = [];
             this._prepared = false;
@@ -1464,7 +1471,6 @@ var Drop;
                     this._value = JSON.parse(expression);
                     this._isValue = true;
                 } catch (e) {
-                    this._isValue = false;
                     if (isExpressionRegex.test(expression)) {
                         var expKeys = expressionToKeys(this._expression);
                         this._expressionKeys = expKeys;
@@ -1559,6 +1565,9 @@ var Drop;
                         errorNextTick(new Error('[drop] expression error: ' + e.message));
                     }
                 }
+            } else if (this.definition.skipExpessionParsing) {
+                this._isValue = true;
+                this._value = undefined;
             } else {
                 var expKeys = this._expressionKeys.concat();
                 var keysLength = getKeysLength(expKeys) || 1;
@@ -2095,10 +2104,10 @@ var Drop;
             get: function () {
                 var _this = this;
                 var helper = createDataHelper(this._data, this.fullScopeKeys);
-
                 var objectKeys = Object.keys(this._scopeData);
 
                 objectKeys.forEach(function (key) {
+                    console.log('key', key);
                     Object.defineProperty(helper, key, {
                         get: function () {
                             return _this._scopeData[key];
@@ -2125,7 +2134,7 @@ var Drop;
             this._fullScopeKeysSet = true;
 
             if (scopeKeys) {
-                removePreThis(scopeKeys);
+                var hasPreThis = removePreThis(scopeKeys);
 
                 if (scopeKeys.length) {
                     var data = this._data;
@@ -2142,18 +2151,14 @@ var Drop;
 
                         if (data.existsKeyInScope(fullScopeKeys, key)) {
                             var info = data.getIdKeysInfo(fullScopeKeys.concat(scopeKeys));
-                            if (info.value != null) {
-                                this._fullScopeKeys = info.keys;
-                                return;
-                            }
+                            this._fullScopeKeys = info.keys;
+                            return;
                         }
                     }
 
                     var info = data.getIdKeysInfo(scopeKeys);
-                    if (info.value != null) {
-                        this._fullScopeKeys = info.keys;
-                        return;
-                    }
+                    this._fullScopeKeys = info.keys;
+                    return;
                 }
             }
 
@@ -2369,8 +2374,8 @@ var Drop;
 
             this.scope = new Scope(fragmentDiv, null, null, data, []);
         }
-        Template.prototype.appendTo = function (node) {
-            node.appendChild(this.scope.fragment);
+        Template.prototype.render = function (node) {
+            node.insertBefore(this.scope.fragment, node.firstChild);
         };
 
         Template._htmlEncode = function (text) {
@@ -2386,7 +2391,7 @@ var Drop;
 
             console.debug('parsed template "' + templateId + '" in ' + (endTime - startTime) + 'ms.');
 
-            template.appendTo(target);
+            template.render(target);
             return template;
         };
 
@@ -2622,6 +2627,8 @@ var Drop;
                                 remove: remove
                             });
 
+                            console.log(subScope.fullScopeKeys);
+
                             pendingSubScopes.push(subScopes.pop());
 
                             var comment = document.createComment(subScope.fullScopeKeys.join('.'));
@@ -2736,6 +2743,8 @@ var Drop;
     // %var
     var varDefinition = new Drop.ProcessorDefinition('var');
 
+    varDefinition.skipExpessionParsing = true;
+
     var isVariableRegex = /^[a-z$_][\w$]*$/i;
 
     varDefinition.oninitialize = function (processor) {
@@ -2766,9 +2775,6 @@ var Drop;
         }
     };
 
-    varDefinition.onchange = function (processor, args) {
-    };
-
     Drop.DecoratorDefinition.register(varDefinition);
 
     // %click-toggle
@@ -2791,9 +2797,6 @@ var Drop;
         processor.target.ensure(function (ele) {
             ele.addEventListener('click', processor.data.onclick);
         }, processor);
-    };
-
-    clickToggleDefinition.onchange = function (processor, args) {
     };
 
     Drop.DecoratorDefinition.register(clickToggleDefinition);
@@ -2863,6 +2866,10 @@ var Drop;
         component.target.replaceWith(input);
 
         component.target.ensure(function (ele) {
+            if (value === undefined) {
+                value = '';
+            }
+
             ele.value = value;
             ele.addEventListener('change', onchange);
             ele.addEventListener('input', onchange);
@@ -2877,6 +2884,10 @@ var Drop;
     inputDefinition.onchange = function (processor, args) {
         var value = processor.expressionValue;
         value = value instanceof Object ? value.value : value;
+
+        if (value === undefined) {
+            value = '';
+        }
 
         // no need to use ensure here because newly added element would go through ensure handler first.
         processor.target.each(function (ele) {

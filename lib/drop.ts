@@ -1018,6 +1018,8 @@ module Drop {
         private static _text: DecoratorDefinition;
         private static _html: DecoratorDefinition;
 
+        skipExpessionParsing = false;
+
         constructor(
             public type: string,
             public name: string,
@@ -1038,7 +1040,7 @@ module Drop {
             try {
                 if (this.oninitialize) {
                     this.oninitialize(decorator);
-                } else {
+                } else if (this.onchange) {
                     this.onchange(decorator, null);
                 }
             } catch (e) {
@@ -1050,7 +1052,9 @@ module Drop {
 
         change(decorator: Decorator, args: IDataChangeEventData<any>[]) {
             try {
-                this.onchange(decorator, args);
+                if (this.onchange) {
+                    this.onchange(decorator, args);
+                }
             } catch (e) {
                 errorNextTick(e);
             }
@@ -1075,8 +1079,8 @@ module Drop {
         }
 
         static register(decorator: DecoratorDefinition) {
-            if (!decorator.onchange) {
-                throw new TypeError('[drop] the onchange handler is required for a decorator');
+            if (!decorator.oninitialize && !decorator.onchange) {
+                throw new TypeError('[drop] at least one of oninitialize and onchange handlers is required for a decorator');
             }
 
             switch (decorator.type) {
@@ -1227,13 +1231,14 @@ module Drop {
             var parentNode = startNode.parentNode;
             parentNode.insertBefore(this._start, startNode);
             parentNode.insertBefore(this._end, endNode.nextSibling);
-            
-            // TODO:
-            // <drop:wrapper></drop:wrapper>
 
             this.initialized = true;
 
-            this._ensure();
+            if ((<HTMLElement>startNode).tagName == 'DROP:WRAPPER') {
+                this.replaceWith(startNode.childNodes);
+            } else {
+                this._ensure();
+            }
         }
 
         dispose() {
@@ -1469,9 +1474,9 @@ module Drop {
         data: any;
 
         private _value: any;
-        private _isValue: boolean;
+        private _isValue = false;
         private _compoundExpression: string;
-        private _isCompound: boolean;
+        private _isCompound = false;
 
         private _expression: string;
         get expression(): string {
@@ -1521,7 +1526,6 @@ module Drop {
                     this._value = JSON.parse(expression);
                     this._isValue = true;
                 } catch (e) {
-                    this._isValue = false;
                     if (isExpressionRegex.test(expression)) {
                         var expKeys = expressionToKeys(this._expression);
                         this._expressionKeys = expKeys;
@@ -1578,6 +1582,9 @@ module Drop {
                         errorNextTick(new Error('[drop] expression error: ' + e.message));
                     }
                 }
+            } else if (this.definition.skipExpessionParsing) {
+                this._isValue = true;
+                this._value = undefined;
             } else {
                 var expKeys = this._expressionKeys.concat();
                 var keysLength = getKeysLength(expKeys) || 1;
@@ -2120,10 +2127,10 @@ module Drop {
 
         get dataHelper(): any {
             var helper = createDataHelper(this._data, this.fullScopeKeys);
-
             var objectKeys = Object.keys(this._scopeData);
 
             objectKeys.forEach(key => {
+                console.log('key', key);
                 Object.defineProperty(helper, key, {
                     get: () => {
                         return this._scopeData[key];
@@ -2147,7 +2154,7 @@ module Drop {
             this._fullScopeKeysSet = true;
 
             if (scopeKeys) {
-                removePreThis(scopeKeys);
+                var hasPreThis = removePreThis(scopeKeys);
 
                 if (scopeKeys.length) {
                     var data = this._data;
@@ -2164,18 +2171,14 @@ module Drop {
 
                         if (data.existsKeyInScope(fullScopeKeys, key)) {
                             var info = data.getIdKeysInfo(fullScopeKeys.concat(scopeKeys));
-                            if (info.value != null) {
-                                this._fullScopeKeys = info.keys;
-                                return;
-                            }
+                            this._fullScopeKeys = info.keys;
+                            return;
                         }
                     }
 
                     var info = data.getIdKeysInfo(scopeKeys);
-                    if (info.value != null) {
-                        this._fullScopeKeys = info.keys;
-                        return;
-                    }
+                    this._fullScopeKeys = info.keys;
+                    return;
                 }
             }
 
@@ -2397,8 +2400,8 @@ module Drop {
             this.scope = new Scope(fragmentDiv, null, null, data, []);
         }
 
-        appendTo(node: Node) {
-            node.appendChild(this.scope.fragment);
+        render(node: Node) {
+            node.insertBefore(this.scope.fragment, node.firstChild);
         }
 
         private static _htmlEncode(text: string): string {
@@ -2417,7 +2420,7 @@ module Drop {
 
             console.debug('parsed template "' + templateId + '" in ' + (endTime - startTime) + 'ms.');
 
-            template.appendTo(target);
+            template.render(target);
             return template;
         }
 
