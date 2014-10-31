@@ -7,7 +7,23 @@
     attributeDefinition.onchange = (decorator, args) => {
         var name = decorator.name;
         var keys = name.split('.');
-        var value = decorator.expressionValue;
+        var value: string = decorator.expressionValue;
+
+        var prevClass: string;
+
+        if (name == 'class') {
+            if (decorator.data) {
+                prevClass = decorator.data.class;
+            } else {
+                decorator.data = {};
+            }
+
+            if (prevClass == value) {
+                return;
+            }
+
+            decorator.data.class = value;
+        }
 
         decorator.target.ensure(ele => {
             if (keys.length == 2) {
@@ -16,6 +32,11 @@
                 if (key in ele) {
                     ele[key][keys[1]] = value;
                 }
+            } else if (name == 'class' && ele.classList) {
+                if (prevClass) {
+                    prevClass.split(' ').forEach(className => ele.classList.remove(className));
+                }
+                value.split(' ').forEach(className => ele.classList.add(className));
             } else if (ele.setAttribute) {
                 ele.setAttribute(name, value);
             }

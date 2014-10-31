@@ -1260,7 +1260,7 @@ var Drop;
                 return;
             }
 
-            var tempParentNode = document.createElement('div');
+            var tempParentNode = document.createElement('drop:temp');
 
             var node = this._start;
             var parentNode = node.parentNode;
@@ -1997,7 +1997,7 @@ var Drop;
 
             dropEles.forEach(function (dropEle) {
                 var parentNode = dropEle.parentNode;
-                while (parentNode != fragmentDiv) {
+                while (parentNode != fragmentDiv && parentNode.tagName != 'DROP:TEMP') {
                     parentNode = parentNode.parentNode;
                     if (!parentNode) {
                         return;
@@ -2457,6 +2457,22 @@ var Drop;
         var keys = name.split('.');
         var value = decorator.expressionValue;
 
+        var prevClass;
+
+        if (name == 'class') {
+            if (decorator.data) {
+                prevClass = decorator.data.class;
+            } else {
+                decorator.data = {};
+            }
+
+            if (prevClass == value) {
+                return;
+            }
+
+            decorator.data.class = value;
+        }
+
         decorator.target.ensure(function (ele) {
             if (keys.length == 2) {
                 var key = keys[0];
@@ -2464,6 +2480,15 @@ var Drop;
                 if (key in ele) {
                     ele[key][keys[1]] = value;
                 }
+            } else if (name == 'class' && ele.classList) {
+                if (prevClass) {
+                    prevClass.split(' ').forEach(function (className) {
+                        return ele.classList.remove(className);
+                    });
+                }
+                value.split(' ').forEach(function (className) {
+                    return ele.classList.add(className);
+                });
             } else if (ele.setAttribute) {
                 ele.setAttribute(name, value);
             }
@@ -2899,4 +2924,4 @@ var Drop;
 })(Drop || (Drop = {}));
 /// <reference path="lib/drop.ts" />
 /// <reference path="lib/decorators.ts" />
-//# sourceMappingURL=drop.js.map
+//# sourceMappingURL=index.js.map

@@ -1272,7 +1272,7 @@ module Drop {
                 return;
             }
 
-            var tempParentNode = document.createElement('div');
+            var tempParentNode = document.createElement('drop:temp');
 
             var node = this._start;
             var parentNode = node.parentNode;
@@ -2011,7 +2011,7 @@ module Drop {
 
             dropEles.forEach(dropEle => {
                 var parentNode = dropEle.parentNode;
-                while (parentNode != fragmentDiv) {
+                while (parentNode != fragmentDiv && (<HTMLElement>parentNode).tagName != 'DROP:TEMP') {
                     parentNode = parentNode.parentNode;
                     if (!parentNode) {
                         return;
