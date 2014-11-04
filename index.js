@@ -2483,12 +2483,15 @@ var Drop;
             } else if (name == 'class' && ele.classList) {
                 if (prevClass) {
                     prevClass.split(' ').forEach(function (className) {
-                        return ele.classList.remove(className);
+                        return className && ele.classList.remove(className);
                     });
                 }
-                value.split(' ').forEach(function (className) {
-                    return ele.classList.add(className);
-                });
+
+                if (value) {
+                    value.split(' ').forEach(function (className) {
+                        return className && ele.classList.add(className);
+                    });
+                }
             } else if (ele.setAttribute) {
                 ele.setAttribute(name, value);
             }

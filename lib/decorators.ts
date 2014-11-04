@@ -34,9 +34,16 @@
                 }
             } else if (name == 'class' && ele.classList) {
                 if (prevClass) {
-                    prevClass.split(' ').forEach(className => ele.classList.remove(className));
+                    prevClass
+                        .split(' ')
+                        .forEach(className => className && ele.classList.remove(className));
                 }
-                value.split(' ').forEach(className => ele.classList.add(className));
+
+                if (value) {
+                    value
+                        .split(' ')
+                        .forEach(className => className && ele.classList.add(className));
+                }
             } else if (ele.setAttribute) {
                 ele.setAttribute(name, value);
             }
