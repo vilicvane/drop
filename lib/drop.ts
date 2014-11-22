@@ -10,7 +10,7 @@ module Drop {
     export var globalEval = eval;
 
     //#region Utils
-    interface IDictionary<Value> {
+    export interface IDictionary<Value> {
         [key: string]: Value;
     }
 
@@ -726,7 +726,7 @@ module Drop {
             }
 
             index = Math.min(index, xarr.length);
-            var ids = xarr.insert(values, index);
+            var ids = xarr.insert(values.map(value => Data.wrap(value)), index);
 
             var changeEventData: IDataChangeEventData<any> = {
                 changeType: DataChangeType.insert,
@@ -1383,6 +1383,23 @@ module Drop {
             handlers.push(handler);
         }
 
+        private _unwrap(fragment: DocumentFragment) {
+            var nodes = <NodeListOf<HTMLElement>>fragment.childNodes;
+            for (var i = 0; i < nodes.length; i++) {
+                var node = nodes[i];
+                if (node.tagName == 'DROP:WRAPPER') {
+                    //var wrappedNumber = node.childNodes.length;
+                    var childFragment = document.createDocumentFragment();
+                    var childNodes = node.childNodes;
+                    while (childNodes.length) {
+                        childFragment.appendChild(childNodes[0]);
+                    }
+                    fragment.replaceChild(childFragment, node);
+                    i--;
+                }
+            }
+        }
+
         replaceWith(fragment: DocumentFragment): DocumentFragment;
         replaceWith(node: Node): DocumentFragment;
         replaceWith(nodes: NodeList): DocumentFragment;
@@ -1404,7 +1421,7 @@ module Drop {
 
             prevNodes.forEach(node => replaced.appendChild(node));
 
-            var fragment: Node;
+            var fragment: DocumentFragment;
             var nodesArray: Node[];
 
             if (nodes instanceof DocumentFragment) {
@@ -1423,6 +1440,8 @@ module Drop {
                 });
             }
 
+            this._unwrap(fragment);
+
             parentNode.insertBefore(fragment, this._end);
 
             this._ensure(nodesArray);
@@ -1437,8 +1456,19 @@ module Drop {
                 refChild = null;
             }
 
-            var nodes: Node[] = child instanceof DocumentFragment ?
-                slice.call(child.childNodes) : [child];
+            var fragment: DocumentFragment;
+
+            var nodes: Node[];
+            if (child instanceof DocumentFragment) {
+                fragment = <DocumentFragment>child;
+                nodes = slice.call(child.childNodes);
+            } else { 
+                fragment = document.createDocumentFragment();
+                fragment.appendChild(child);
+                nodes = [child];
+            }
+
+            this._unwrap(fragment);
 
             parentNode.insertBefore(child, refChild || this._end);
 
@@ -1986,13 +2016,7 @@ module Drop {
             if (modifier) {
                 modifier.scope = this;
 
-                var expKeys = modifier.expressionKeys;
-
-                if (!expKeys) {
-                    throw new TypeError('[drop] the expression passing to a modifier has to be a scope, can not be "' + modifier.expression + '"');
-                }
-
-                this._setFullScopeKeys(expKeys);
+                this._setFullScopeKeys(modifier.expressionKeys);
 
                 modifier.prepareDependencies();
                 modifier.invoke(null);
@@ -2130,7 +2154,6 @@ module Drop {
             var objectKeys = Object.keys(this._scopeData);
 
             objectKeys.forEach(key => {
-                console.log('key', key);
                 Object.defineProperty(helper, key, {
                     get: () => {
                         return this._scopeData[key];
