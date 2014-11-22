@@ -1,10 +1,13 @@
-﻿interface DropElement extends HTMLElement {
+interface DropElement extends HTMLElement {
 }
 interface Element {
-    getElementsByTagName(name: 'drop'): NodeListOf<DropElement>;
+    getElementsByTagName(name: "drop"): NodeListOf<DropElement>;
 }
 declare module Drop {
     var globalEval: typeof eval;
+    interface IDictionary<Value> {
+        [key: string]: Value;
+    }
     interface IEventListener<T> {
         (event: IEventData): T;
     }
@@ -14,32 +17,32 @@ declare module Drop {
     class EventHost {
         private _events;
         private _onceEvents;
-        public on(type: string, listener: IEventListener<any>): void;
-        public once(type: string, listener: IEventListener<any>): void;
-        public off(type: string, listener: IEventListener<any>): void;
-        public trigger(type: string, data?: any): boolean;
+        on(type: string, listener: IEventListener<any>): void;
+        once(type: string, listener: IEventListener<any>): void;
+        off(type: string, listener: IEventListener<any>): void;
+        trigger(type: string, data?: any): boolean;
     }
     class XArray {
         private _indexToId;
         private _array;
         private _nextId;
         constructor(array?: any[]);
-        public length : number;
-        public id(index: number): number;
-        public existsId(id: number): boolean;
-        public item(index: number): any;
-        public itemById(id: number): any;
-        public range(index?: number, length?: number): any[];
-        public add(item: any): number;
-        public set(index: number, value: any): number;
-        public setById(id: number, value: any): boolean;
-        public insert(items: any[], index?: number): number[];
-        public remove(index: number, length?: number): number[];
+        length: number;
+        id(index: number): number;
+        existsId(id: number): boolean;
+        item(index: number): any;
+        itemById(id: number): any;
+        range(index?: number, length?: number): any[];
+        add(item: any): number;
+        set(index: number, value: any): number;
+        setById(id: number, value: any): boolean;
+        insert(items: any[], index?: number): number[];
+        remove(index: number, length?: number): number[];
         /**
-        * return index
-        */
-        public removeById(id: number): number;
-        public clear(): number[];
+         * return index
+         */
+        removeById(id: number): number;
+        clear(): number[];
     }
     enum DataChangeType {
         set = 0,
@@ -65,31 +68,31 @@ declare module Drop {
     class Data extends EventHost {
         private _data;
         constructor(data: any);
-        public helper : any;
-        public getIdKeysInfo(keys: string[]): IKeysInfo<any>;
-        public get<Value>(keys: string[], getInGlobal?: boolean): Value;
-        public existsKeyInScope(scopeKeys: string[], key: string): boolean;
-        public getObjectKeys(keys: string[]): string[];
+        helper: any;
+        getIdKeysInfo(keys: string[]): IKeysInfo<any>;
+        get<Value>(keys: string[], getInGlobal?: boolean): Value;
+        existsKeyInScope(scopeKeys: string[], key: string): boolean;
+        getObjectKeys(keys: string[]): string[];
         private static _existsKey(data, key);
         private static _getIdKeysInfo<Value>(data, keys);
         private static _get<Value>(data, keys, getInGlobal?);
-        public insert<Value>(keys: string[], values: Value[], index?: number): number[];
+        insert<Value>(keys: string[], values: Value[], index?: number): number[];
         /**
-        * return index
-        */
-        public removeByKeys(keys: string[]): number;
-        public remove(keys: string[], index: number, length?: number): number[];
-        public clear(keys: string[]): number[];
-        public set<Value>(keys: string[], value: Value): string[];
+         * return index
+         */
+        removeByKeys(keys: string[]): number;
+        remove(keys: string[], index: number, length?: number): number[];
+        clear(keys: string[]): number[];
+        set<Value>(keys: string[], value: Value): string[];
         static wrap(data: any): any;
         static unwrap(data: any): any;
     }
     class DecoratorDefinition {
-        public type: string;
-        public name: string;
-        public oninitialize: (decorator: Decorator) => void;
-        public onchange: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void;
-        public ondispose: (decorator: Decorator) => void;
+        type: string;
+        name: string;
+        oninitialize: (decorator: Decorator) => void;
+        onchange: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void;
+        ondispose: (decorator: Decorator) => void;
         private static _modifiersMap;
         private static _processorsMap;
         private static _componentsMap;
@@ -97,119 +100,120 @@ declare module Drop {
         private static _event;
         private static _text;
         private static _html;
-        public skipExpessionParsing: boolean;
+        skipExpessionParsing: boolean;
         constructor(type: string, name: string, oninitialize?: (decorator: Decorator) => void, onchange?: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void, ondispose?: (decorator: Decorator) => void);
-        public initialize(decorator: Decorator): void;
-        public change(decorator: Decorator, args: IDataChangeEventData<any>[]): void;
-        public invoke(decorator: Decorator, args?: IDataChangeEventData<any>[]): void;
-        public dispose(decorator: Decorator): void;
+        initialize(decorator: Decorator): void;
+        change(decorator: Decorator, args: IDataChangeEventData<any>[]): void;
+        invoke(decorator: Decorator, args?: IDataChangeEventData<any>[]): void;
+        dispose(decorator: Decorator): void;
         static register(decorator: DecoratorDefinition): void;
         static getDefinition(type: string, name?: string): DecoratorDefinition;
         static typeToMark: IDictionary<string>;
     }
     class ModifierDefinition extends DecoratorDefinition {
-        public oninitialize: (decorator: Decorator) => void;
-        public onchange: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void;
+        oninitialize: (decorator: Decorator) => void;
+        onchange: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void;
         constructor(name: string, oninitialize?: (decorator: Decorator) => void, onchange?: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void);
         private _onscopechange(decorator, args);
-        public change(decorator: Decorator, args: IDataChangeEventData<any>[]): void;
+        change(decorator: Decorator, args: IDataChangeEventData<any>[]): void;
     }
     /**
-    * Create definition of a processor.
-    *
-    */
+     * Create definition of a processor.
+     *
+     */
     class ProcessorDefinition extends DecoratorDefinition {
-        public oninitialize: (decorator: Decorator) => void;
-        public onchange: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void;
+        oninitialize: (decorator: Decorator) => void;
+        onchange: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void;
         constructor(name: string, oninitialize?: (decorator: Decorator) => void, onchange?: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void);
     }
     /**
-    * Create definition of a component
-    */
+     * Create definition of a component
+     */
     class ComponentDefinition extends DecoratorDefinition {
-        public oninitialize: (decorator: Decorator) => void;
-        public onchange: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void;
+        oninitialize: (decorator: Decorator) => void;
+        onchange: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void;
         constructor(name: string, oninitialize?: (decorator: Decorator) => void, onchange?: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void);
     }
     interface IDecoratorTargetEnsureHandler {
         (node: HTMLElement): void;
     }
     /**
-    * DecoratorTarget
-    *
-    */
+     * DecoratorTarget
+     *
+     */
     class DecoratorTarget {
         private _removedMarker;
         private _tempParentNode;
         private _start;
         private _end;
-        public start : Node;
-        public end : Node;
+        start: Node;
+        end: Node;
         constructor(startNode?: Node, endNode?: Node);
-        public initialized: boolean;
-        public initialize(startNode: Node, endNode?: Node): void;
-        public dispose(): void;
+        initialized: boolean;
+        initialize(startNode: Node, endNode?: Node): void;
+        dispose(): void;
         /**
-        * remove this target from DOM tree and insert an marker comment.
-        * see also append()
-        */
-        public remove(): void;
+         * remove this target from DOM tree and insert an marker comment.
+         * see also append()
+         */
+        remove(): void;
         /**
-        * append the target back to DOM tree.
-        * see also remove()
-        */
-        public append(): void;
-        public each(handler: (node: HTMLElement, index: number) => void): void;
+         * append the target back to DOM tree.
+         * see also remove()
+         */
+        append(): void;
+        each(handler: (node: HTMLElement, index: number) => void): void;
         private _ensureHandlers;
         private _ensure(nodes?);
         /**
-        * ensure the handler will be called on every node, including nodes added later.
-        * calling ensure the second time will remove the previous handler,
-        * so every decorator has one single ensure handler that will be triggered
-        * at the same time only.
-        */
-        public ensure(handler: (node: HTMLElement) => void, decorator: Decorator): void;
-        public replaceWith(fragment: DocumentFragment): DocumentFragment;
-        public replaceWith(node: Node): DocumentFragment;
-        public replaceWith(nodes: NodeList): DocumentFragment;
-        public replaceWith(nodes: Node[]): DocumentFragment;
-        public insertBefore(child: Node, refChild: Node): void;
-        public appendChild(child: Node): void;
+         * ensure the handler will be called on every node, including nodes added later.
+         * calling ensure the second time will remove the previous handler,
+         * so every decorator has one single ensure handler that will be triggered
+         * at the same time only.
+         */
+        ensure(handler: (node: HTMLElement) => void, decorator: Decorator): void;
+        private _unwrap(fragment);
+        replaceWith(fragment: DocumentFragment): DocumentFragment;
+        replaceWith(node: Node): DocumentFragment;
+        replaceWith(nodes: NodeList): DocumentFragment;
+        replaceWith(nodes: Node[]): DocumentFragment;
+        insertBefore(child: Node, refChild: Node): void;
+        appendChild(child: Node): void;
     }
     /**
-    * Decorator
-    */
+     * Decorator
+     */
     class Decorator {
-        public target: DecoratorTarget;
-        public type: string;
-        public name: string;
-        public scope: Scope;
-        public definition: DecoratorDefinition;
-        public initialized: boolean;
-        public data: any;
+        target: DecoratorTarget;
+        type: string;
+        name: string;
+        scope: Scope;
+        definition: DecoratorDefinition;
+        initialized: boolean;
+        data: any;
         private _value;
         private _isValue;
         private _compoundExpression;
         private _isCompound;
         private _expression;
-        public expression : string;
-        public parsedExpression : string;
+        expression: string;
+        parsedExpression: string;
         private _expressionKeys;
-        public expressionKeys : string[];
+        expressionKeys: string[];
         private _expressionFullIdKeys;
-        public expressionFullIdKeys : string[];
+        expressionFullIdKeys: string[];
         private _scopeListenerTypes;
         private _listenerTypes;
         private _listener;
-        public hasDependency : boolean;
+        hasDependency: boolean;
         constructor(target: DecoratorTarget, type: string, name: string, scope: Scope, expression: string);
         private _prepared;
-        public prepareDependencies(): void;
+        prepareDependencies(): void;
         private _pendingChangeDataArgs;
-        public invoke(arg: IDataChangeEventData<any>, sync?: boolean): void;
-        public initialize(): void;
-        public dispose(): void;
-        public expressionValue : any;
+        invoke(arg: IDataChangeEventData<any>, sync?: boolean): void;
+        initialize(): void;
+        dispose(): void;
+        expressionValue: any;
         private _getStringDependenciesInfo(str);
         private _getExpressionDependenciesInfo(compoundExpression);
     }
@@ -218,51 +222,51 @@ declare module Drop {
         private _data;
         private _keys;
         constructor(data: Data, keys: string[]);
-        public length : number;
-        public item<Value>(index: number): Value;
-        public valueOf<Value>(): Value;
-        public set<Value>(index: number, value: Value): void;
-        public push(...items: any[]): void;
-        public insert(items: any[], index?: number): void;
-        public remove(index: number, length?: number): void;
-        public clear(): void;
+        length: number;
+        item<Value>(index: number): Value;
+        valueOf<Value>(): Value;
+        set<Value>(index: number, value: Value): void;
+        push(...items: any[]): void;
+        insert(items: any[], index?: number): void;
+        remove(index: number, length?: number): void;
+        clear(): void;
     }
     class ObjectDataHelper {
         constructor(data: Data, keys: string[]);
     }
     class Scope extends EventHost {
-        public fragmentTemplate: HTMLDivElement;
-        public modifier: Decorator;
-        public parentScope: Scope;
+        fragmentTemplate: HTMLDivElement;
+        modifier: Decorator;
+        parentScope: Scope;
         private _scopeData;
         private _data;
-        public data : Data;
-        public childScopes: Scope[];
-        public decorators: Decorator[];
+        data: Data;
+        childScopes: Scope[];
+        decorators: Decorator[];
         private _fragmentDiv;
-        public fragment : DocumentFragment;
+        fragment: DocumentFragment;
         constructor(fragmentTemplate: HTMLDivElement, modifier: Decorator, parentScope: Scope, data?: Data, scopeKeys?: string[], scopeData?: {});
-        public initialize(): void;
+        initialize(): void;
         private _fullScopeKeysSet;
         private _fullScopeKeys;
-        public fullScopeKeys : string[];
-        public dataHelper : any;
+        fullScopeKeys: string[];
+        dataHelper: any;
         private _setFullScopeKeys(scopeKeys?);
-        public setScopeData(key: string, value: any): void;
-        public setData(fullIdKeys: string[], value: any): void;
-        public getData<Value>(key: string): Value;
-        public getData<Value>(keys: string[]): Value;
-        public getFullIdKeys(keys: string[]): string[];
-        public evaluate(keys: string[], isFullKeys?: boolean): any;
-        public evaluateString(str: string, isFullKeys?: boolean): string;
-        public evaluateExpression(expression: string, isFullKeys?: boolean): any;
-        public dispose(skipModifier?: boolean): void;
+        setScopeData(key: string, value: any): void;
+        setData(fullIdKeys: string[], value: any): void;
+        getData<Value>(key: string): Value;
+        getData<Value>(keys: string[]): Value;
+        getFullIdKeys(keys: string[]): string[];
+        evaluate(keys: string[], isFullKeys?: boolean): any;
+        evaluateString(str: string, isFullKeys?: boolean): string;
+        evaluateExpression(expression: string, isFullKeys?: boolean): any;
+        dispose(skipModifier?: boolean): void;
     }
     class Template {
         private static _fragmentDivsMap;
-        public scope: Scope;
+        scope: Scope;
         constructor(tpl: string, data: Data);
-        public render(node: Node): void;
+        render(node: Node): void;
         private static _htmlEncode(text);
         static apply(templateId: string, data: Data, target: HTMLElement): Template;
         static parse(tpl: string): HTMLDivElement;
