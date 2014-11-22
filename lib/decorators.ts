@@ -112,7 +112,7 @@
 
     var scopeDefinition = new ModifierDefinition('scope');
 
-    scopeDefinition.onchange = (modifier) => {
+    scopeDefinition.onchange = modifier => {
         var scope = modifier.scope;
         scope.initialize();
         modifier.target.replaceWith(scope.fragment);
@@ -285,10 +285,6 @@
 
                         break;
                 }
-
-                // remove
-
-                // maybe move, etc...
             });
         };
 
@@ -377,15 +373,13 @@
             throw new TypeError('[drop %click-toggle] expression "' + processor.expression + '" is not valid for toggle');
         }
 
-        processor.data = {
-            onclick: () => {
-                var value = !processor.expressionValue;
-                processor.scope.setData(fullIdKeys, value);
-            }
-        };
+        function onclick() {
+            var value = !processor.expressionValue;
+            processor.scope.setData(fullIdKeys, value);
+        }
 
         processor.target.ensure(ele => {
-            ele.addEventListener('click', processor.data.onclick);
+            ele.addEventListener('click', onclick);
         }, processor);
     };
     
