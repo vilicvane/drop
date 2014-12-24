@@ -266,9 +266,14 @@ declare module Drop {
         private static _fragmentDivsMap;
         scope: Scope;
         constructor(tpl: string, data: Data);
-        render(node: Node): void;
+        insertTo(node: Node): void;
         private static _htmlEncode(text);
+        static createById(id: string, data: Data): Template;
         static apply(templateId: string, data: Data, target: HTMLElement): Template;
+        /**
+         * a quick and simple render to process some small view
+         */
+        static render(tpl: string, data: any): any;
         static parse(tpl: string): HTMLDivElement;
     }
 }

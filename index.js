@@ -46,9 +46,9 @@ var Drop;
                 requestTick();
             }
         };
-        if (typeof setImmediate === 'function') {
+        if (typeof setImmediate == 'function') {
             // In IE10, Node.js 0.9+, or https://github.com/NobleJS/setImmediate
-            if (typeof window !== 'undefined') {
+            if (typeof window != 'undefined') {
                 requestTick = setImmediate.bind(window, flush);
             }
             else {
@@ -57,7 +57,7 @@ var Drop;
                 };
             }
         }
-        else if (typeof MessageChannel !== 'undefined') {
+        else if (typeof MessageChannel != 'undefined') {
             // modern browsers
             // http://www.nonblocking.io/2011/06/windownexttick.html
             var channel = new MessageChannel();
@@ -471,7 +471,9 @@ var Drop;
             var i = 0;
             for (i; i < keys.length - 1; i++) {
                 key = keys[i];
+                var hasKey;
                 if (data instanceof XArray && indexOrIdRegex.test(key)) {
+                    hasKey = true;
                     var index;
                     var id;
                     if (key[0] == ':') {
@@ -491,12 +493,13 @@ var Drop;
                     }
                 }
                 else {
+                    hasKey = hop.call(data, key);
                     data = data[key];
                     idKeys.push(key);
                 }
                 if (data == null) {
                     return {
-                        keys: i == 0 ? null : idKeys.concat(keys.slice(i + 1)),
+                        keys: i == 0 && !hasKey ? null : idKeys.concat(keys.slice(i + 1)),
                         value: undefined
                     };
                 }
@@ -522,7 +525,7 @@ var Drop;
                     value = data.itemById(id);
                 }
             }
-            else if (hop.call(data, key)) {
+            else if (hop.call(data, key) || i > 0) {
                 idKeys.push(key);
                 value = data[key];
             }
@@ -2022,11 +2025,14 @@ var Drop;
             fragmentDiv = fragmentDiv.cloneNode(true);
             this.scope = new Scope(fragmentDiv, null, null, data, []);
         }
-        Template.prototype.render = function (node) {
+        Template.prototype.insertTo = function (node) {
             node.insertBefore(this.scope.fragment, node.firstChild);
         };
         Template._htmlEncode = function (text) {
             return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        };
+        Template.createById = function (id, data) {
+            return new Template(document.getElementById(id).textContent, data);
         };
         Template.apply = function (templateId, data, target) {
             var templateText = document.getElementById(templateId).textContent;
@@ -2034,8 +2040,35 @@ var Drop;
             var template = new Drop.Template(templateText, data);
             var endTime = Date.now();
             console.debug('parsed template "' + templateId + '" in ' + (endTime - startTime) + 'ms.');
-            template.render(target);
+            template.insertTo(target);
             return template;
+        };
+        /**
+         * a quick and simple render to process some small view
+         */
+        Template.render = function (tpl, data) {
+            if (data) {
+                tpl = tpl.replace(/\\\\|\\\{|\{([\w\d]+(?:\.[\w\d]+)*)\}/g, function (m, expression) {
+                    if (!expression) {
+                        return m;
+                    }
+                    var keys = expression.split('.');
+                    var value = data;
+                    for (var i = 0; i < keys.length; i++) {
+                        var key = keys[i];
+                        value = value[key];
+                        if (value == null) {
+                            break;
+                        }
+                    }
+                    return value === undefined ? m : value;
+                });
+            }
+            var div = document.createElement('div');
+            div.innerHTML = tpl;
+            var nodes = div.childNodes;
+            var eles = slice.call(nodes);
+            return eles.length > 1 ? eles : eles[0];
         };
         Template.parse = function (tpl) {
             tpl = tpl.replace(preprocessRegex, function (m, commentToSkip, escapedToSkip, typeMarker, name, typeMarker2, expansion) {

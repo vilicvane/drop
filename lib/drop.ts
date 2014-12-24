@@ -65,9 +65,9 @@ module Drop {
             }
         };
 
-        if (typeof setImmediate === 'function') {
+        if (typeof setImmediate == 'function') {
             // In IE10, Node.js 0.9+, or https://github.com/NobleJS/setImmediate
-            if (typeof window !== 'undefined') {
+            if (typeof window != 'undefined') {
                 requestTick = setImmediate.bind(window, flush);
             } else {
                 requestTick = () => {
@@ -75,7 +75,7 @@ module Drop {
                 };
             }
 
-        } else if (typeof MessageChannel !== 'undefined') {
+        } else if (typeof MessageChannel != 'undefined') {
             // modern browsers
             // http://www.nonblocking.io/2011/06/windownexttick.html
             var channel = new MessageChannel();
@@ -558,7 +558,7 @@ module Drop {
             }
         }
 
-        private static _getIdKeysInfo<Value>(data: any, keys: string[]): IKeysInfo<Value>{
+        private static _getIdKeysInfo<Value>(data: any, keys: string[]): IKeysInfo<Value> {
             // logic below should be identical to _get
 
             var idKeys: string[] = [];
@@ -567,7 +567,11 @@ module Drop {
 
             for (i; i < keys.length - 1; i++) {
                 key = keys[i];
+                var hasKey: boolean;
+
                 if (data instanceof XArray && indexOrIdRegex.test(key)) {
+                    hasKey = true;
+
                     var index: number;
                     var id: number;
 
@@ -586,13 +590,14 @@ module Drop {
                         idKeys.push(':' + id);
                     }
                 } else {
+                    hasKey = hop.call(data, key);
                     data = data[key];
                     idKeys.push(key);
                 }
 
                 if (data == null) {
                     return {
-                        keys: i == 0 ? null : idKeys.concat(keys.slice(i + 1)),
+                        keys: i == 0 && !hasKey ? null : idKeys.concat(keys.slice(i + 1)),
                         value: undefined
                     };
                 }
@@ -619,7 +624,7 @@ module Drop {
                     idKeys.push(':' + id);
                     value = (<XArray>data).itemById(id);
                 }
-            } else if (hop.call(data, key)) {
+            } else if (hop.call(data, key) || i > 0) {
                 idKeys.push(key);
                 value = data[key];
             } else {
@@ -2423,7 +2428,7 @@ module Drop {
             this.scope = new Scope(fragmentDiv, null, null, data, []);
         }
 
-        render(node: Node) {
+        insertTo(node: Node) {
             node.insertBefore(this.scope.fragment, node.firstChild);
         }
 
@@ -2432,6 +2437,10 @@ module Drop {
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;');
+        }
+
+        static createById(id: string, data: Data): Template {
+            return new Template(document.getElementById(id).textContent, data);
         }
 
         static apply(templateId: string, data: Data, target: HTMLElement) {
@@ -2443,8 +2452,43 @@ module Drop {
 
             console.debug('parsed template "' + templateId + '" in ' + (endTime - startTime) + 'ms.');
 
-            template.render(target);
+            template.insertTo(target);
             return template;
+        }
+
+
+        /**
+         * a quick and simple render to process some small view
+         */
+        static render(tpl: string, data: any): any {
+            if (data) {
+                tpl = tpl.replace(/\\\\|\\\{|\{([\w\d]+(?:\.[\w\d]+)*)\}/g, (m: string, expression: string) => {
+                    if (!expression) {
+                        return m;
+                    }
+
+                    var keys = expression.split('.');
+                    var value = data;
+
+                    for (var i = 0; i < keys.length; i++) { 
+                        var key = keys[i];
+                        value = value[key];
+                        if (value == null) { 
+                            break;
+                        }
+                    }
+
+                    return value === undefined ? m : value;
+                });
+            }
+
+            var div = document.createElement('div');
+            div.innerHTML = tpl;
+
+            var nodes = div.childNodes;
+
+            var eles = <Node[]>slice.call(nodes);
+            return eles.length > 1 ? eles : eles[0];
         }
 
         static parse(tpl: string): HTMLDivElement {
