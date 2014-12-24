@@ -1,8 +1,10 @@
-﻿# DropJS
+# DropJS
 
-Drop is a MVVM framework (a what?) sibling to frameworks like [Angular](https://angularjs.org/) and [Ember](http://emberjs.com/). But I hate terminologies, so in this guide you won't see many words like _model_ or _view_. Instead, I use _data_ and _DOM_.
+Drop is a MVVM framework sibling to frameworks like [Angular](https://angularjs.org/) and [Ember](http://emberjs.com/), but targeting mobile web apps.
 
-To start with, I need to point out that DropJS is in its very first period. Though the core has been basically completed, extensions including router are not available yet.
+I am now using this version of Drop to build the new version of my [WordsBaking](https://wordsbaking.com/), and yes I've already been experiencing some inconveniences (as well as some interesting tricks). So after I complete the developing of my app, I will rewrite Drop to rule out these issues. Along with that, multiple libraries would be released to form a complete solution for mobile web apps with rich touching and offline usage. :D
+
+To start with, I need to point out that Drop is in its very first period. Though the core has been basically completed, extensions including router are not available yet.
 
 ## Glance into DropJS
 
