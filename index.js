@@ -1577,6 +1577,15 @@ var Drop;
         return Decorator;
     })();
     Drop.Decorator = Decorator;
+    function unwrapDataHelper(data) {
+        if (data instanceof ArrayDataHelper || data instanceof ObjectDataHelper) {
+            return data.valueOf();
+        }
+        else {
+            return data;
+        }
+    }
+    Drop.unwrapDataHelper = unwrapDataHelper;
     function createDataHelper(data, keys) {
         var value = data.get(keys);
         if (value instanceof Array) {
@@ -1637,6 +1646,7 @@ var Drop;
     var ObjectDataHelper = (function () {
         function ObjectDataHelper(data, keys) {
             var _this = this;
+            this._data = data;
             keys = keys.concat();
             var objectKeys = data.getObjectKeys(keys);
             objectKeys.forEach(function (key) {
@@ -1653,6 +1663,9 @@ var Drop;
                 });
             });
         }
+        ObjectDataHelper.prototype.valueOf = function () {
+            return this._data.get([]);
+        };
         return ObjectDataHelper;
     })();
     Drop.ObjectDataHelper = ObjectDataHelper;
@@ -1855,9 +1868,16 @@ var Drop;
         Scope.prototype.setScopeData = function (key, value) {
             var scopeData = this._scopeData;
             if (!hop.call(scopeData, key) || scopeData[key] != value) {
+                var oldValue = scopeData[key];
                 scopeData[key] = value;
-                this.trigger('change:' + key);
+                this.trigger('change:' + key, {
+                    oldValue: oldValue,
+                    value: value
+                });
             }
+        };
+        Scope.prototype.getScopeData = function (key) {
+            return this._scopeData[key];
         };
         Scope.prototype.setData = function (fullIdKeys, value) {
             if (fullIdKeys[0] == 'this') {
@@ -1875,7 +1895,7 @@ var Drop;
                 keys = expressionToKeys(keys);
             }
             var fullIdKeys = this.getFullIdKeys(keys);
-            if (fullIdKeys[0] == 'this') {
+            if (fullIdKeys && fullIdKeys[0] == 'this') {
                 return this._scopeData[fullIdKeys[1]];
             }
             else {
@@ -2019,7 +2039,10 @@ var Drop;
             var fragmentDivsMap = Template._fragmentDivsMap;
             var fragmentDiv = fragmentDivsMap.get(tpl);
             if (!fragmentDiv) {
+                var startTime = Date.now();
                 fragmentDiv = Template.parse(tpl);
+                var endTime = Date.now();
+                console.debug('parsed template in ' + (endTime - startTime) + 'ms.');
                 fragmentDivsMap.set(tpl, fragmentDiv);
             }
             fragmentDiv = fragmentDiv.cloneNode(true);
@@ -2031,24 +2054,22 @@ var Drop;
         Template._htmlEncode = function (text) {
             return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         };
-        Template.createById = function (id, data) {
-            return new Template(document.getElementById(id).textContent, data);
+        Template.createById = function (templateId, data) {
+            console.log('parsing template "' + templateId + '"...');
+            return new Template(document.getElementById(templateId).textContent, data);
         };
         Template.apply = function (templateId, data, target) {
             var templateText = document.getElementById(templateId).textContent;
-            var startTime = Date.now();
-            var template = new Drop.Template(templateText, data);
-            var endTime = Date.now();
-            console.debug('parsed template "' + templateId + '" in ' + (endTime - startTime) + 'ms.');
+            var template = Template.createById(templateId, data);
             template.insertTo(target);
             return template;
         };
         /**
-         * a quick and simple render to process some small view
+         * a quick and simple helper to fill data to string
          */
-        Template.render = function (tpl, data) {
+        Template.fillString = function (tpl, data) {
             if (data) {
-                tpl = tpl.replace(/\\\\|\\\{|\{([\w\d]+(?:\.[\w\d]+)*)\}/g, function (m, expression) {
+                tpl = tpl.replace(/\\\\|\\\{|\{([\w\d]+(?:[.-][\w\d]+)*)\}/g, function (m, expression) {
                     if (!expression) {
                         return m;
                     }
@@ -2064,11 +2085,7 @@ var Drop;
                     return value === undefined ? m : value;
                 });
             }
-            var div = document.createElement('div');
-            div.innerHTML = tpl;
-            var nodes = div.childNodes;
-            var eles = slice.call(nodes);
-            return eles.length > 1 ? eles : eles[0];
+            return tpl;
         };
         Template.parse = function (tpl) {
             tpl = tpl.replace(preprocessRegex, function (m, commentToSkip, escapedToSkip, typeMarker, name, typeMarker2, expansion) {
@@ -2275,7 +2292,6 @@ var Drop;
                                 index: i,
                                 remove: remove
                             });
-                            console.log(subScope.fullScopeKeys);
                             pendingSubScopes.push(subScopes.pop());
                             var comment = document.createComment(subScope.fullScopeKeys.join('.'));
                             tempIndexTargets.push({
@@ -2334,6 +2350,9 @@ var Drop;
     var bindValueDefinition = new Drop.ProcessorDefinition('bind-value');
     bindValueDefinition.oninitialize = function (processor) {
         var value = processor.expressionValue;
+        if (value === undefined) {
+            value = '';
+        }
         var idKeys = processor.expressionFullIdKeys;
         processor.target.ensure(function (ele) {
             ele.value = value;
@@ -2347,9 +2366,14 @@ var Drop;
     };
     bindValueDefinition.onchange = function (processor, args) {
         var value = processor.expressionValue;
+        if (value === undefined) {
+            value = '';
+        }
         // no need to use ensure here because newly added element would go through ensure handler first.
         processor.target.each(function (ele) {
-            ele.value = value;
+            if (ele.value != value) {
+                ele.value = value;
+            }
         });
     };
     Drop.DecoratorDefinition.register(bindValueDefinition);
@@ -2366,15 +2390,20 @@ var Drop;
         var scope = processor.scope;
         if (name) {
             // 1. {%var abc}
-            scope.setScopeData(name, undefined);
+            if (scope.getScopeData(name) === undefined) {
+                scope.setScopeData(name, undefined);
+            }
         }
         else {
             // 2. {%var abc = 123}
             var value = processor.expressionValue;
-            if (!(value instanceof Object)) {
-                return;
+            if (value instanceof Object) {
+                Object.keys(value).forEach(function (name) {
+                    if (scope.getScopeData(name) === undefined) {
+                        scope.setScopeData(name, undefined);
+                    }
+                });
             }
-            Object.keys(value).forEach(function (name) { return scope.setScopeData(name, value[name]); });
         }
     };
     Drop.DecoratorDefinition.register(varDefinition);
@@ -2441,12 +2470,12 @@ var Drop;
             idKeys = groups[1].split('.');
             value = component.expressionValue.value;
         }
+        if (value === undefined) {
+            value = '';
+        }
         var input = document.createElement('input');
         component.target.replaceWith(input);
         component.target.ensure(function (ele) {
-            if (value === undefined) {
-                value = '';
-            }
             ele.value = value;
             ele.addEventListener('change', onchange);
             ele.addEventListener('input', onchange);
@@ -2464,9 +2493,13 @@ var Drop;
         }
         // no need to use ensure here because newly added element would go through ensure handler first.
         processor.target.each(function (ele) {
-            ele.value = value;
+            if (ele.value != value) {
+                ele.value = value;
+            }
         });
     };
     Drop.DecoratorDefinition.register(inputDefinition);
 })(Drop || (Drop = {}));
+/// <reference path="lib/drop.ts" />
+/// <reference path="lib/decorators.ts" />
 //# sourceMappingURL=index.js.map

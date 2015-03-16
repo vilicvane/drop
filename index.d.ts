@@ -1,7 +1,7 @@
 interface DropElement extends HTMLElement {
 }
 interface Element {
-    getElementsByTagName(name: "drop"): NodeListOf<DropElement>;
+    getElementsByTagName(name: 'drop'): NodeListOf<DropElement>;
 }
 declare module Drop {
     var globalEval: typeof eval;
@@ -9,9 +9,9 @@ declare module Drop {
         [key: string]: Value;
     }
     interface IEventListener<T> {
-        (event: IEventData): T;
+        (event: IEvent): T;
     }
-    interface IEventData {
+    interface IEvent {
         type?: string;
     }
     class EventHost {
@@ -50,20 +50,20 @@ declare module Drop {
         remove = 2,
         clear = 3,
     }
-    interface IDataChangeData<Value> {
+    interface IDataChangeData<T> {
         changeType: DataChangeType;
         ids?: number[];
-        oldValue?: Value;
-        value?: Value;
-        values?: Value[];
+        oldValue?: T;
+        value?: T;
+        values?: T[];
         index?: number;
     }
-    interface IDataChangeEventData<Value> extends IDataChangeData<Value>, IEventData {
+    interface IDataChangeEvent<T> extends IDataChangeData<T>, IEvent {
         keys: string[];
     }
-    interface IKeysInfo<Value> {
+    interface IKeysInfo<T> {
         keys: string[];
-        value: Value;
+        value: T;
     }
     class Data extends EventHost {
         private _data;
@@ -91,7 +91,7 @@ declare module Drop {
         type: string;
         name: string;
         oninitialize: (decorator: Decorator) => void;
-        onchange: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void;
+        onchange: (decorator: Decorator, args: IDataChangeEvent<any>[]) => void;
         ondispose: (decorator: Decorator) => void;
         private static _modifiersMap;
         private static _processorsMap;
@@ -101,10 +101,10 @@ declare module Drop {
         private static _text;
         private static _html;
         skipExpessionParsing: boolean;
-        constructor(type: string, name: string, oninitialize?: (decorator: Decorator) => void, onchange?: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void, ondispose?: (decorator: Decorator) => void);
+        constructor(type: string, name: string, oninitialize?: (decorator: Decorator) => void, onchange?: (decorator: Decorator, args: IDataChangeEvent<any>[]) => void, ondispose?: (decorator: Decorator) => void);
         initialize(decorator: Decorator): void;
-        change(decorator: Decorator, args: IDataChangeEventData<any>[]): void;
-        invoke(decorator: Decorator, args?: IDataChangeEventData<any>[]): void;
+        change(decorator: Decorator, args: IDataChangeEvent<any>[]): void;
+        invoke(decorator: Decorator, args?: IDataChangeEvent<any>[]): void;
         dispose(decorator: Decorator): void;
         static register(decorator: DecoratorDefinition): void;
         static getDefinition(type: string, name?: string): DecoratorDefinition;
@@ -112,10 +112,10 @@ declare module Drop {
     }
     class ModifierDefinition extends DecoratorDefinition {
         oninitialize: (decorator: Decorator) => void;
-        onchange: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void;
-        constructor(name: string, oninitialize?: (decorator: Decorator) => void, onchange?: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void);
+        onchange: (decorator: Decorator, args: IDataChangeEvent<any>[]) => void;
+        constructor(name: string, oninitialize?: (decorator: Decorator) => void, onchange?: (decorator: Decorator, args: IDataChangeEvent<any>[]) => void);
         private _onscopechange(decorator, args);
-        change(decorator: Decorator, args: IDataChangeEventData<any>[]): void;
+        change(decorator: Decorator, args: IDataChangeEvent<any>[]): void;
     }
     /**
      * Create definition of a processor.
@@ -123,16 +123,16 @@ declare module Drop {
      */
     class ProcessorDefinition extends DecoratorDefinition {
         oninitialize: (decorator: Decorator) => void;
-        onchange: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void;
-        constructor(name: string, oninitialize?: (decorator: Decorator) => void, onchange?: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void);
+        onchange: (decorator: Decorator, args: IDataChangeEvent<any>[]) => void;
+        constructor(name: string, oninitialize?: (decorator: Decorator) => void, onchange?: (decorator: Decorator, args: IDataChangeEvent<any>[]) => void);
     }
     /**
      * Create definition of a component
      */
     class ComponentDefinition extends DecoratorDefinition {
         oninitialize: (decorator: Decorator) => void;
-        onchange: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void;
-        constructor(name: string, oninitialize?: (decorator: Decorator) => void, onchange?: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void);
+        onchange: (decorator: Decorator, args: IDataChangeEvent<any>[]) => void;
+        constructor(name: string, oninitialize?: (decorator: Decorator) => void, onchange?: (decorator: Decorator, args: IDataChangeEvent<any>[]) => void);
     }
     interface IDecoratorTargetEnsureHandler {
         (node: HTMLElement): void;
@@ -210,13 +210,14 @@ declare module Drop {
         private _prepared;
         prepareDependencies(): void;
         private _pendingChangeDataArgs;
-        invoke(arg: IDataChangeEventData<any>, sync?: boolean): void;
+        invoke(arg: IDataChangeEvent<any>, sync?: boolean): void;
         initialize(): void;
         dispose(): void;
         expressionValue: any;
         private _getStringDependenciesInfo(str);
         private _getExpressionDependenciesInfo(compoundExpression);
     }
+    function unwrapDataHelper(data: any): any;
     function createDataHelper(data: Data, keys: string[]): any;
     class ArrayDataHelper {
         private _data;
@@ -232,7 +233,15 @@ declare module Drop {
         clear(): void;
     }
     class ObjectDataHelper {
+        private _data;
         constructor(data: Data, keys: string[]);
+        valueOf<T>(): T;
+    }
+    interface IScopeDataChangeData<T> {
+        oldValue?: T;
+        value?: T;
+    }
+    interface IScopeDataChangeEvent<T> extends IScopeDataChangeData<T>, IEvent {
     }
     class Scope extends EventHost {
         fragmentTemplate: HTMLDivElement;
@@ -252,10 +261,11 @@ declare module Drop {
         fullScopeKeys: string[];
         dataHelper: any;
         private _setFullScopeKeys(scopeKeys?);
-        setScopeData(key: string, value: any): void;
-        setData(fullIdKeys: string[], value: any): void;
-        getData<Value>(key: string): Value;
-        getData<Value>(keys: string[]): Value;
+        setScopeData<T>(key: string, value: T): void;
+        getScopeData<T>(key: string): T;
+        setData<T>(fullIdKeys: string[], value: T): void;
+        getData<T>(key: string): T;
+        getData<T>(keys: string[]): T;
         getFullIdKeys(keys: string[]): string[];
         evaluate(keys: string[], isFullKeys?: boolean): any;
         evaluateString(str: string, isFullKeys?: boolean): string;
@@ -268,12 +278,12 @@ declare module Drop {
         constructor(tpl: string, data: Data);
         insertTo(node: Node): void;
         private static _htmlEncode(text);
-        static createById(id: string, data: Data): Template;
+        static createById(templateId: string, data: Data): Template;
         static apply(templateId: string, data: Data, target: HTMLElement): Template;
         /**
-         * a quick and simple render to process some small view
+         * a quick and simple helper to fill data to string
          */
-        static render(tpl: string, data: any): any;
+        static fillString(tpl: string, data: any): string;
         static parse(tpl: string): HTMLDivElement;
     }
 }

@@ -213,10 +213,10 @@ module Drop {
     }
 
     export interface IEventListener<T> {
-        (event: IEventData): T;
+        (event: IEvent): T;
     }
 
-    export interface IEventData {
+    export interface IEvent {
         type?: string;
     }
 
@@ -467,22 +467,22 @@ module Drop {
         clear
     }
 
-    export interface IDataChangeData<Value> {
+    export interface IDataChangeData<T> {
         changeType: DataChangeType
         ids?: number[];
-        oldValue?: Value;
-        value?: Value;
-        values?: Value[];
+        oldValue?: T;
+        value?: T;
+        values?: T[];
         index?: number;
     }
 
-    export interface IDataChangeEventData<Value> extends IDataChangeData<Value>, IEventData {
+    export interface IDataChangeEvent<T> extends IDataChangeData<T>, IEvent {
         keys: string[];
     }
 
-    export interface IKeysInfo<Value> {
+    export interface IKeysInfo<T> {
         keys: string[];
-        value: Value;
+        value: T;
     }
 
     function expressionToKeys(expression: string): string[] {
@@ -733,7 +733,7 @@ module Drop {
             index = Math.min(index, xarr.length);
             var ids = xarr.insert(values.map(value => Data.wrap(value)), index);
 
-            var changeEventData: IDataChangeEventData<any> = {
+            var changeEventData: IDataChangeEvent<any> = {
                 changeType: DataChangeType.insert,
                 ids: ids,
                 keys: idKeys,
@@ -782,7 +782,7 @@ module Drop {
             var index = xarr.removeById(id);
 
             if (index >= 0) {
-                var changeEventData: IDataChangeEventData<any> = {
+                var changeEventData: IDataChangeEvent<any> = {
                     changeType: DataChangeType.remove,
                     ids: [id],
                     keys: idKeys,
@@ -815,7 +815,7 @@ module Drop {
 
             var ids = xarr.remove(index, length);
 
-            var changeEventData: IDataChangeEventData<any> = {
+            var changeEventData: IDataChangeEvent<any> = {
                 changeType: DataChangeType.remove,
                 ids: ids,
                 keys: idKeys,
@@ -847,7 +847,7 @@ module Drop {
 
             var ids = xarr.clear();
 
-            var changeEventData: IDataChangeEventData<any> = {
+            var changeEventData: IDataChangeEvent<any> = {
                 changeType: DataChangeType.clear,
                 ids: ids,
                 keys: idKeys
@@ -945,7 +945,7 @@ module Drop {
 
             oldValue = Data.unwrap(oldValue);
 
-            var changeEventData: IDataChangeEventData<any> = {
+            var changeEventData: IDataChangeEvent<any> = {
                 changeType: DataChangeType.set,
                 keys: keys,
                 oldValue: oldValue,
@@ -1029,7 +1029,7 @@ module Drop {
             public type: string,
             public name: string,
             public oninitialize?: (decorator: Decorator) => void,
-            public onchange?: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void,
+            public onchange?: (decorator: Decorator, args: IDataChangeEvent<any>[]) => void,
             public ondispose?: (decorator: Decorator) => void
             ) {
             if (!decoratorNameRegex.test(name)) {
@@ -1055,7 +1055,7 @@ module Drop {
             decorator.initialized = true;
         }
 
-        change(decorator: Decorator, args: IDataChangeEventData<any>[]) {
+        change(decorator: Decorator, args: IDataChangeEvent<any>[]) {
             try {
                 if (this.onchange) {
                     this.onchange(decorator, args);
@@ -1065,7 +1065,7 @@ module Drop {
             }
         }
 
-        invoke(decorator: Decorator, args?: IDataChangeEventData<any>[]) {
+        invoke(decorator: Decorator, args?: IDataChangeEvent<any>[]) {
             if (decorator.initialized) {
                 this.change(decorator, args);
             } else {
@@ -1151,17 +1151,17 @@ module Drop {
         constructor(
             name: string,
             public oninitialize?: (decorator: Decorator) => void,
-            public onchange?: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void
+            public onchange?: (decorator: Decorator, args: IDataChangeEvent<any>[]) => void
             ) {
             super('modifier', name, oninitialize, onchange);
         }
 
-        private _onscopechange(decorator: Decorator, args: IDataChangeEventData<any>[]) {
+        private _onscopechange(decorator: Decorator, args: IDataChangeEvent<any>[]) {
             var scope = decorator.scope;
             scope.dispose(true);
         }
 
-        change(decorator: Decorator, args: IDataChangeEventData<any>[]) {
+        change(decorator: Decorator, args: IDataChangeEvent<any>[]) {
             try {
                 if (args.some(arg => arg.changeType == DataChangeType.set)) {
                     this._onscopechange(decorator, args);
@@ -1181,7 +1181,7 @@ module Drop {
         constructor(
             name: string,
             public oninitialize?: (decorator: Decorator) => void,
-            public onchange?: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void
+            public onchange?: (decorator: Decorator, args: IDataChangeEvent<any>[]) => void
             ) {
             super('processor', name, oninitialize, onchange);
         }
@@ -1195,7 +1195,7 @@ module Drop {
         constructor(
             name: string,
             public oninitialize?: (decorator: Decorator) => void,
-            public onchange?: (decorator: Decorator, args: IDataChangeEventData<any>[]) => void
+            public onchange?: (decorator: Decorator, args: IDataChangeEvent<any>[]) => void
             ) {
             super('component', name, oninitialize, onchange);
         }
@@ -1534,7 +1534,7 @@ module Drop {
 
         private _scopeListenerTypes: string[] = [];
         private _listenerTypes: string[] = [];
-        private _listener: (arg: IDataChangeEventData<any>) => void;
+        private _listener: (arg: IDataChangeEvent<any>) => void;
 
         get hasDependency(): boolean {
             return !!(this._scopeListenerTypes.length || this._listenerTypes.length);
@@ -1676,9 +1676,9 @@ module Drop {
             this._listener = listener;
         }
 
-        private _pendingChangeDataArgs: IDataChangeEventData<any>[];
+        private _pendingChangeDataArgs: IDataChangeEvent<any>[];
 
-        invoke(arg: IDataChangeEventData<any>, sync = true) {
+        invoke(arg: IDataChangeEvent<any>, sync = true) {
             // change type other than set may change the index of the data in an array.
             // if two of them happen synchronously, it might cause incorrect id keys as
             // all decorators including modifiers are handling these changes asynchronously.
@@ -1884,6 +1884,14 @@ module Drop {
         }
     }
 
+    export function unwrapDataHelper(data: any): any {
+        if (data instanceof ArrayDataHelper || data instanceof ObjectDataHelper) {
+            return data.valueOf();
+        } else {
+            return data;
+        }
+    }
+
     export function createDataHelper(data: Data, keys: string[]): any {
         var value = data.get(keys);
 
@@ -1920,7 +1928,7 @@ module Drop {
             return createDataHelper(this._data, info.keys);
         }
 
-        valueOf<Value>(): Value{
+        valueOf<Value>(): Value {
             return this._data.get<Value>(this._keys);
         }
 
@@ -1946,7 +1954,11 @@ module Drop {
     }
 
     export class ObjectDataHelper {
+        private _data: Data;
+
         constructor(data: Data, keys: string[]) {
+            this._data = data;
+
             keys = keys.concat();
             var objectKeys = data.getObjectKeys(keys);
 
@@ -1965,7 +1977,18 @@ module Drop {
                 });
             });
         }
+
+        valueOf<T>(): T {
+            return this._data.get<T>([]);
+        }
     }
+
+    export interface IScopeDataChangeData<T> {
+        oldValue?: T;
+        value?: T;
+    }
+
+    export interface IScopeDataChangeEvent<T> extends IScopeDataChangeData<T>, IEvent { }
 
     export class Scope extends EventHost {
 
@@ -2213,15 +2236,23 @@ module Drop {
             this._fullScopeKeys = null;
         }
 
-        setScopeData(key: string, value: any) {
+        setScopeData<T>(key: string, value: T) {
             var scopeData = this._scopeData;
             if (!hop.call(scopeData, key) || scopeData[key] != value) {
+                var oldValue = scopeData[key];
                 scopeData[key] = value;
-                this.trigger('change:' + key);
+                this.trigger('change:' + key, <IScopeDataChangeData<T>>{
+                    oldValue: oldValue,
+                    value: value
+                });
             }
         }
 
-        setData(fullIdKeys: string[], value: any) {
+        getScopeData<T>(key: string): T {
+            return this._scopeData[key];
+        }
+
+        setData<T>(fullIdKeys: string[], value: T) {
             if (fullIdKeys[0] == 'this') {
                 if (fullIdKeys.length != 2) {
                     throw new TypeError('[drop] scope data does not support nested object (' + fullIdKeys.join('.') + ')');
@@ -2232,18 +2263,18 @@ module Drop {
             }
         }
 
-        getData<Value>(key: string): Value;
-        getData<Value>(keys: string[]): Value
-        getData<Value>(keys: any): Value {
+        getData<T>(key: string): T;
+        getData<T>(keys: string[]): T
+        getData<T>(keys: any): T {
             if (typeof keys == 'string') {
                 keys = expressionToKeys(keys);
             }
 
             var fullIdKeys = this.getFullIdKeys(keys);
-            if (fullIdKeys[0] == 'this') {
+            if (fullIdKeys && fullIdKeys[0] == 'this') {
                 return this._scopeData[fullIdKeys[1]];
             } else {
-                return this.data.get<Value>(fullIdKeys);
+                return this.data.get<T>(fullIdKeys);
             }
         }
 
@@ -2419,7 +2450,12 @@ module Drop {
             var fragmentDiv = fragmentDivsMap.get(tpl);
 
             if (!fragmentDiv) {
+                var startTime = Date.now();
                 fragmentDiv = Template.parse(tpl);
+                var endTime = Date.now();
+
+                console.debug('parsed template in ' + (endTime - startTime) + 'ms.');
+
                 fragmentDivsMap.set(tpl, fragmentDiv);
             }
 
@@ -2439,30 +2475,26 @@ module Drop {
                 .replace(/>/g, '&gt;');
         }
 
-        static createById(id: string, data: Data): Template {
-            return new Template(document.getElementById(id).textContent, data);
+        static createById(templateId: string, data: Data): Template {
+            console.log('parsing template "' + templateId + '"...');
+            return new Template(document.getElementById(templateId).textContent, data);
         }
 
         static apply(templateId: string, data: Data, target: HTMLElement) {
             var templateText = document.getElementById(templateId).textContent;
 
-            var startTime = Date.now();
-            var template = new Drop.Template(templateText, data);
-            var endTime = Date.now();
-
-            console.debug('parsed template "' + templateId + '" in ' + (endTime - startTime) + 'ms.');
-
+            var template = Template.createById(templateId, data);
+            
             template.insertTo(target);
             return template;
         }
 
-
         /**
-         * a quick and simple render to process some small view
+         * a quick and simple helper to fill data to string
          */
-        static render(tpl: string, data: any): any {
+        static fillString(tpl: string, data: any): string {
             if (data) {
-                tpl = tpl.replace(/\\\\|\\\{|\{([\w\d]+(?:\.[\w\d]+)*)\}/g, (m: string, expression: string) => {
+                tpl = tpl.replace(/\\\\|\\\{|\{([\w\d]+(?:[.-][\w\d]+)*)\}/g, (m: string, expression: string) => {
                     if (!expression) {
                         return m;
                     }
@@ -2482,13 +2514,7 @@ module Drop {
                 });
             }
 
-            var div = document.createElement('div');
-            div.innerHTML = tpl;
-
-            var nodes = div.childNodes;
-
-            var eles = <Node[]>slice.call(nodes);
-            return eles.length > 1 ? eles : eles[0];
+            return tpl;
         }
 
         static parse(tpl: string): HTMLDivElement {

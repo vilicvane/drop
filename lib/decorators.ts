@@ -215,8 +215,6 @@
                                 remove: remove
                             });
 
-                            console.log(subScope.fullScopeKeys);
-
                             pendingSubScopes.push(subScopes.pop());
 
                             var comment = document.createComment(subScope.fullScopeKeys.join('.'));
@@ -299,13 +297,18 @@
 
     bindValueDefinition.oninitialize = processor => {
         var value = processor.expressionValue;
+
+        if (value === undefined) {
+            value = '';
+        }
+
         var idKeys = processor.expressionFullIdKeys;
 
-        processor.target.ensure(ele => {
-            (<HTMLInputElement>ele).value = value;
-            (<HTMLElement>ele).addEventListener('change', onchange);
-            (<HTMLElement>ele).addEventListener('input', onchange);
-            (<HTMLElement>ele).addEventListener('paste', onchange);
+        processor.target.ensure((ele: HTMLInputElement) => {
+            ele.value = value;
+            ele.addEventListener('change', onchange);
+            ele.addEventListener('input', onchange);
+            ele.addEventListener('paste', onchange);
         }, processor);
 
         function onchange() {
@@ -316,9 +319,15 @@
     bindValueDefinition.onchange = (processor, args) => {
         var value = processor.expressionValue;
 
+        if (value === undefined) {
+            value = '';
+        }
+
         // no need to use ensure here because newly added element would go through ensure handler first.
-        processor.target.each(ele => {
-            (<HTMLInputElement>ele).value = value;
+        processor.target.each((ele: HTMLInputElement) => {
+            if (ele.value != value) {
+                ele.value = value;
+            }
         });
     };
 
@@ -345,18 +354,22 @@
 
         if (name) {
             // 1. {%var abc}
-            scope.setScopeData(name, undefined);
+            if (scope.getScopeData<any>(name) === undefined) {
+                scope.setScopeData(name, undefined);
+            }
         } else {
             // 2. {%var abc = 123}
             var value = processor.expressionValue;
 
-            if (!(value instanceof Object)) {
-                return;
+            if (value instanceof Object) {
+                Object
+                    .keys(value)
+                    .forEach(name => {
+                        if (scope.getScopeData<any>(name) === undefined) {
+                            scope.setScopeData(name, undefined);
+                        }
+                    });
             }
-
-            Object
-                .keys(value)
-                .forEach(name => scope.setScopeData(name, value[name]));
         }
     };
 
@@ -448,19 +461,19 @@
             value = component.expressionValue.value;
         }
 
+        if (value === undefined) {
+            value = '';
+        }
+
         var input = document.createElement('input');
 
         component.target.replaceWith(input);
 
-        component.target.ensure(ele => {
-            if (value === undefined) {
-                value = '';
-            }
-
-            (<HTMLInputElement>ele).value = value;
-            (<HTMLElement>ele).addEventListener('change', onchange);
-            (<HTMLElement>ele).addEventListener('input', onchange);
-            (<HTMLElement>ele).addEventListener('paste', onchange);
+        component.target.ensure((ele: HTMLInputElement) => {
+            ele.value = value;
+            ele.addEventListener('change', onchange);
+            ele.addEventListener('input', onchange);
+            ele.addEventListener('paste', onchange);
         }, component);
 
         function onchange() {
@@ -477,32 +490,12 @@
         }
 
         // no need to use ensure here because newly added element would go through ensure handler first.
-        processor.target.each(ele => {
-            (<HTMLInputElement>ele).value = value;
+        processor.target.each((ele: HTMLInputElement) => {
+            if (ele.value != value) {
+                ele.value = value;
+            }
         });
     };
 
     DecoratorDefinition.register(inputDefinition);
-
-    // %template
-
-    //interface ITemplateProcessor extends Decorator {
-    //    data: {
-    //        fragment: DocumentFragment;
-    //    }
-    //}
-
-    //var templateDefinition = new ProcessorDefinition('template')
-
-    //templateDefinition.onchange = ((processor: ITemplateProcessor, args) => {
-        
-
-    
-
-    //});
-
-    //DecoratorDefinition.register(templateDefinition);
-
-    // >click 
-    // &component
 }
