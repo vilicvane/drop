@@ -1,6 +1,8 @@
 # DropJS
 
-Drop is a MVVM framework sibling to frameworks like [Angular](https://angularjs.org/) and [Ember](http://emberjs.com/), but targeting mobile web apps.
+Drop is a MV* framework sibling to frameworks like [Angular](https://angularjs.org/) and [Ember](http://emberjs.com/), but targeting mobile web apps.
+
+IT IS BEEN REDESIGNED, CHECK OUT https://github.com/vilic/drop/labels/v0.2.
 
 I am now using this version of Drop to build the new version of my [WordsBaking](https://wordsbaking.com/), and yes I've already been experiencing some inconveniences (as well as some interesting tricks). So after I complete the developing of my app, I will rewrite Drop to rule out these issues. Along with that, multiple libraries would be released to form a complete solution for mobile web apps with rich touching and offline usage. :D
 
