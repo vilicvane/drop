@@ -1,0 +1,33 @@
+{
+  "name": "dropjs",
+  "version": "0.2.0",
+  "description": "Just another JavaScript Framework",
+  "main": "bld/index.js",
+  "scripts": {
+    "test": "mocha",
+    "tsc": "tsc",
+    "update-regexes": "node scripts/update-regexes.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vilic/drop.git"
+  },
+  "author": "vilicvane",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vilic/drop/issues"
+  },
+  "homepage": "https://github.com/vilic/drop#readme",
+  "devDependencies": {
+    "@types/chai": "^3.4.34",
+    "@types/glob": "^5.0.30",
+    "@types/mocha": "^2.2.33",
+    "chai": "^3.5.0",
+    "glob": "^7.1.1",
+    "mocha": "^3.2.0",
+    "regex-tools": "^0.3.0",
+    "ruff-standard": "^0.2.2",
+    "source-map-support": "^0.4.6",
+    "typescript": "^2.1.4"
+  }
+}

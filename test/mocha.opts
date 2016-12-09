@@ -1,0 +1,4 @@
+--require test/mocha.js
+--recursive
+
+bld/test
