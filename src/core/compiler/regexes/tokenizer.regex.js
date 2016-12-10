@@ -8,8 +8,8 @@ const {
 
 // TOKEN_REGEX
 
-const punctuation = /($punctuation:[(){}[\],.?:])/;
-const operator = /($operator:[!=]==?|[<>]=?|[-+*/%]|&&|\|\|)/;
+const punctuation = /($punctuation:[(){}[\];,.?:])/;
+const operator = /($operator:[!=]==?|[<>]=?|[-+*/%=!]|&&|\|\|?)/;
 const whitespace = /\s+/;
 const unexpectedToken = /($unexpectedToken:[0-9a-zA-Z$_]+|[^])/;
 

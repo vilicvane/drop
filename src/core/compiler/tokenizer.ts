@@ -1,47 +1,52 @@
-const TOKEN_REGEX = /* /$token/ */ /(([a-zA-Z$_]+[0-9a-zA-Z$_]*))|((["'])(?:(?!\4|[\\\r\n\u2028\u2029])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0(?!\d)|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:\r?\n|\r(?!\n)|[\u2028\u2029]))*(?:\4|()))|((?:(?:0|[1-9](?:[0-9])+)\.(?:(?:[0-9])+)?(?:[eE][+-]?(?:[0-9])+)?|\.(?:[0-9])+(?:[eE][+-]?(?:[0-9])+)?|(?:0|[1-9](?:[0-9])+)(?:[eE][+-]?(?:[0-9])+)?|0[bB](?:[01])+|0[oO](?:[0-7])+|0[xX](?:[0-9a-fA-F])+)(?![a-zA-Z0-9$_]))|([(){}[\],.?:])|([!=]==?|[<>]=?|[-+*\/%]|&&|\|\|)|\s+|([0-9a-zA-Z$_]+|[^])/g;
+const TOKEN_REGEX = /* /$token/ */ /([a-zA-Z$_]+[0-9a-zA-Z$_])|((["'])(?:(?!\3|[\\\r\n\u2028\u2029])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0(?!\d)|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:\r?\n|\r(?!\n)|[\u2028\u2029]))*(?:\3|()))|((?:(?:0|[1-9][0-9]*)\.[0-9]*(?:[eE][+-]?[0-9]+)?|\.[0-9]+(?:[eE][+-]?[0-9]+)?|(?:0|[1-9][0-9]*)(?:[eE][+-]?[0-9]+)?|0[bB][01]+|0[oO][0-7]+|0[xX][0-9a-fA-F]+)(?![a-zA-Z0-9$_]))|([(){}[\];,.?:])|([!=]==?|[<>]=?|[-+*\/%=!]|&&|\|\|?)|\s+|([0-9a-zA-Z$_]+|[^])/g;
 
 /* /$token/ */
 const enum TokenCapture {
     identifier = 1,
-    identifier2,
     stringLiteral,
-    stringUnexpectedEnd = 5,
+    stringUnexpectedEnd = 4,
     numericLiteral,
     punctuation,
     operator,
     unexpectedToken
 }
 
+export const enum TokenType {
+    identifier,
+    numericLiteral,
+    stringLiteral,
+    punctuation,
+    operator
+}
+
 export interface TokenBase {
-    type: string;
-    source: string;
+    type: TokenType;
+    text: string;
+    constant?: boolean;
     start: number;
     end: number;
 }
 
 export interface Identifier extends TokenBase {
-    type: 'identifier';
-    text: string;
+    type: TokenType.identifier;
 }
 
 export interface NumericLiteral extends TokenBase {
-    type: 'numeric-literal';
+    type: TokenType.numericLiteral;
     value: number;
 }
 
 export interface StringLiteral extends TokenBase {
-    type: 'string-literal';
+    type: TokenType.stringLiteral;
     value: string;
 }
 
 export interface Punctuation extends TokenBase {
-    type: 'punctuation';
-    text: string;
+    type: TokenType.punctuation;
 }
 
 export interface Operator extends TokenBase {
-    type: 'operator';
-    text: string;
+    type: TokenType.operator;
 }
 
 export type Token =
@@ -73,9 +78,8 @@ class Tokenizer {
 
             if (identifier) {
                 this.tokens.push({
-                    type: 'identifier',
+                    type: TokenType.identifier,
                     text: identifier,
-                    source: identifier,
                     start,
                     end: this.index
                 });
@@ -87,9 +91,10 @@ class Tokenizer {
 
             if (numericLiteral) {
                 this.tokens.push({
-                    type: 'numeric-literal',
+                    type: TokenType.numericLiteral,
+                    text: numericLiteral,
+                    constant: true,
                     value: Number(numericLiteral),
-                    source: numericLiteral,
                     start,
                     end: this.index
                 });
@@ -103,13 +108,14 @@ class Tokenizer {
                 let stringUnexpectedEnd = captures[TokenCapture.stringUnexpectedEnd];
 
                 if (typeof stringUnexpectedEnd === 'string') {
-                    this.throw('Unexpected end of string');
+                    throw this.error('Unexpected end of string');
                 }
 
                 this.tokens.push({
-                    type: 'string-literal',
+                    type: TokenType.stringLiteral,
+                    text: stringLiteral,
+                    constant: true,
                     value: eval(stringLiteral),
-                    source: stringLiteral,
                     start,
                     end: this.index
                 });
@@ -121,9 +127,8 @@ class Tokenizer {
 
             if (punctuation) {
                 this.tokens.push({
-                    type: 'punctuation',
+                    type: TokenType.punctuation,
                     text: punctuation,
-                    source: punctuation,
                     start,
                     end: this.index
                 });
@@ -135,14 +140,19 @@ class Tokenizer {
 
             if (operator) {
                 this.tokens.push({
-                    type: 'operator',
+                    type: TokenType.operator,
                     text: operator,
-                    source: operator,
                     start,
                     end: this.index
                 });
 
                 continue;
+            }
+
+            let unexpectedToken = captures[TokenCapture.unexpectedToken];
+
+            if (unexpectedToken) {
+                throw this.error(`Unexpected token "${unexpectedToken}"`);
             }
         }
 
@@ -155,9 +165,9 @@ class Tokenizer {
         return tokens;
     }
 
-    private throw(message: string): never {
+    private error(message: string): SyntaxError {
         // TODO: detailed error information.
-        throw new SyntaxError(message);
+        return new SyntaxError(message);
     }
 }
 

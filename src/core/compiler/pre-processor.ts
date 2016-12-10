@@ -1,4 +1,4 @@
-const PRE_START_REGEX = /* /$preStart/ */ /\\([^])|\[([#@+]?)([a-zA-Z$_]+[0-9a-zA-Z$_]*)|\{(=)?/g;
+const PRE_START_REGEX = /* /$preStart/ */ /\\([^])|\[([#@+]?)([a-zA-Z$_]+[0-9a-zA-Z$_])|\{(=)?/g;
 const PRE_TOKEN_REGEX = /* /$preToken/ */ /(["'])(?:(?!\1|[\\\r\n\u2028\u2029])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0(?!\d)|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:\r?\n|\r(?!\n)|[\u2028\u2029]))*(?:\1|())|([([{])|([)\]}])|[^]/g;
 
 /* /$preStart/ */
@@ -139,12 +139,12 @@ class PreProcessor {
             expression += captures[0];
         }
 
-        this.throw('Unexpected end of source');
+        throw this.error('Unexpected end of source');
     }
 
-    private throw(message: string): never {
+    private error(message: string): SyntaxError {
         // TODO: detailed error information.
-        throw new SyntaxError(message);
+        return new SyntaxError(message);
     }
 
     private pushStack(element: StackElement): void {
@@ -154,7 +154,7 @@ class PreProcessor {
     private popStack(actual: StackElement): boolean {
         let expected = this.stack.pop();
         if (expected !== actual) {
-            this.throw(`Unexpected token "${actual}"`)
+            throw this.error(`Unexpected token "${actual}"`)
         }
         return !this.stack.length;
     }

@@ -13,7 +13,10 @@ const decoratorTypeMarker = /($type:[#@+]?)/;
 const decoratorStart = [
     /\[/,
     decoratorTypeMarker,
-    identifier
+    {
+        name: 'identifier',
+        regexes: identifier
+    }
 ];
 
 const templateStart = /\{($raw:=)?/;

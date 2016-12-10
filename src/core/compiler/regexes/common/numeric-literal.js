@@ -7,6 +7,10 @@ let decimalDigits = {
     regexes: decimalDigit,
     repeat: '+'
 };
+let decimalDigitsOptional = {
+    regexes: decimalDigit,
+    repeat: '*'
+};
 
 let binaryDigit = /[01]/;
 let binaryDigits = {
@@ -38,7 +42,7 @@ let decimalIntegerLiteral = {
         /0/,
         [
             noneZeroDigit,
-            decimalDigits
+            decimalDigitsOptional
         ]
     ],
     or: true
@@ -54,10 +58,7 @@ let decimalLiteral = {
         [
             decimalIntegerLiteral,
             /\./,
-            {
-                regexes: decimalDigits,
-                repeat: '?'
-            },
+            decimalDigitsOptional,
             {
                 regexes: exponentPart,
                 repeat: '?'
