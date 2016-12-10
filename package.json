@@ -4,10 +4,11 @@
   "description": "Just another JavaScript Framework",
   "main": "bld/index.js",
   "scripts": {
-    "test": "istanbul cover node_modules/mocha/bin/_mocha",
     "tsc": "tsc",
     "update-regexes": "node scripts/update-regexes.js",
-    "build": "npm run update-regexes && tsc"
+    "build": "npm run update-regexes && tsc",
+    "test": "istanbul cover node_modules/mocha/bin/_mocha",
+    "coveralls": "cat coverage/lcov.info | coveralls"
   },
   "repository": {
     "type": "git",
