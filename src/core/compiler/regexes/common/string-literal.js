@@ -3,7 +3,7 @@
 // TODO: this is copied from previous developing version, rewrite it later.
 
 let quote = /($~stringQuote:["'])/;
-let ending = /($stringQuote)/;
+let ending = /($stringQuote)|($stringUnexpectedEnd:)/;
 
 let singleEscapeChar = /['"\\bfnrtv]/;
 let nonEscapeChar = /[^'"\\bfnrtv\dxu\r\n\u2028\u2029]/;

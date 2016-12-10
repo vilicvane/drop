@@ -4,9 +4,10 @@
   "description": "Just another JavaScript Framework",
   "main": "bld/index.js",
   "scripts": {
-    "test": "mocha",
+    "test": "istanbul cover node_modules/mocha/bin/_mocha",
     "tsc": "tsc",
-    "update-regexes": "node scripts/update-regexes.js"
+    "update-regexes": "node scripts/update-regexes.js",
+    "build": "npm run update-regexes && tsc"
   },
   "repository": {
     "type": "git",
@@ -23,7 +24,10 @@
     "@types/glob": "^5.0.30",
     "@types/mocha": "^2.2.33",
     "chai": "^3.5.0",
+    "coveralls": "^2.11.15",
+    "eslint": "^3.12.0",
     "glob": "^7.1.1",
+    "istanbul": "^1.1.0-alpha.1",
     "mocha": "^3.2.0",
     "regex-tools": "^0.3.0",
     "ruff-standard": "^0.2.2",

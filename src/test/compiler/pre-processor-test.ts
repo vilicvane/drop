@@ -42,8 +42,12 @@ describe('compiler', () => {
         it('should process source with template', () => {
             process('<div>{value + {}}</div>')
                 .should.equal('<div><dp:decorator name="text" type="processor">value + {}</dp:decorator><dp:target></dp:target></div>');
-            process('<div>{=[value]}</div>')
-                .should.equal('<div><dp:decorator name="html" type="processor">[value]</dp:decorator><dp:target></dp:target></div>');
+            process('<div>{=["<br>"]}</div>')
+                .should.equal('<div><dp:decorator name="html" type="processor">["&lt;br&gt;"]</dp:decorator><dp:target></dp:target></div>');
+        });
+
+        it('should throw error on unmatched brackets', () => {
+            process.bind(undefined, '[test (]').should.throw('Unexpected token');
         });
     });
 });

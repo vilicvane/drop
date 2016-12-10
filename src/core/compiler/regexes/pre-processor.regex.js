@@ -1,13 +1,12 @@
 'use strict';
 
 const {
-    numericLiteral,
+    identifier,
     stringLiteral
 } = require('./common');
 
 // PRE_START_REGEX
 
-const identifier = /($identifier:[a-zA-Z$_]+[0-9a-zA-Z$_]*)/;
 const escapedChar = /\\($escaped:[^])/;
 const decoratorTypeMarker = /($type:[#@+]?)/;
 

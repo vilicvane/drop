@@ -106,5 +106,6 @@ module.exports = [
             hexIntegerLiteral
         ],
         or: true
-    }
+    },
+    /(?![a-zA-Z0-9$_])/
 ];

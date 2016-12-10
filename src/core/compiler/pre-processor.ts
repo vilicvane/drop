@@ -1,5 +1,5 @@
 const PRE_START_REGEX = /* /$preStart/ */ /\\([^])|\[([#@+]?)([a-zA-Z$_]+[0-9a-zA-Z$_]*)|\{(=)?/g;
-const PRE_TOKEN_REGEX = /* /$preToken/ */ /(["'])(?:(?!\1|[\\\r\n\u2028\u2029])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0(?!\d)|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:\r?\n|\r(?!\n)|[\u2028\u2029]))*\1|([([{])|([)\]}])|[^]/g;
+const PRE_TOKEN_REGEX = /* /$preToken/ */ /(["'])(?:(?!\1|[\\\r\n\u2028\u2029])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0(?!\d)|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:\r?\n|\r(?!\n)|[\u2028\u2029]))*(?:\1|())|([([{])|([)\]}])|[^]/g;
 
 /* /$preStart/ */
 const enum PreStartCapture {
@@ -11,7 +11,8 @@ const enum PreStartCapture {
 
 /* /$preToken/ */
 const enum PreTokenCapture {
-    openingBracket = 2,
+    stringUnexpectedEnd = 2,
+    openingBracket,
     closingBracket
 }
 
@@ -22,20 +23,21 @@ const enum PreProcessFlags {
 
 type StackElement = ')' | ']' | '}';
 
-export default class PreProcessor {
-    private index = 0;
-    private output = '';
+class PreProcessor {
+    private source: string;
+    private index: number;
+    private output: string;
+    private stack: StackElement[];
 
-    private stack: StackElement[] = [];
+    process(source: string): string {
+        this.source = source;
+        this.index = 0;
+        this.output = '';
+        this.stack = [];
 
-    constructor(
-        public source: string
-    ) { }
-
-    process(): string {
         PRE_START_REGEX.lastIndex = this.index;
 
-        let captures;
+        let captures: RegExpExecArray | null;
 
         while (captures = PRE_START_REGEX.exec(this.source)) {
             this.output += this.source.slice(this.index, PRE_START_REGEX.lastIndex - captures[0].length);
@@ -58,10 +60,6 @@ export default class PreProcessor {
                     case '':
                         this.output += `<dp:decorator name="${identifier}" type="processor">`;
                         break;
-                    case '@':
-                    case '+':
-                    default:
-                        break;
                 }
 
                 this.pushStack(']');
@@ -83,7 +81,14 @@ export default class PreProcessor {
 
         this.output += this.source.slice(this.index);
 
-        return this.output;
+        let output = this.output;
+
+        this.source = undefined!;
+        this.index = undefined!;
+        this.output = undefined!;
+        this.stack = undefined!
+
+        return output;
     }
 
     private readTokens(): void {
@@ -91,7 +96,7 @@ export default class PreProcessor {
 
         PRE_TOKEN_REGEX.lastIndex = this.index;
 
-        let captures;
+        let captures: RegExpExecArray | null;
 
         while (captures = PRE_TOKEN_REGEX.exec(this.source)) {
             expression += this.source.slice(this.index, PRE_TOKEN_REGEX.lastIndex - captures[0].length);
@@ -155,6 +160,8 @@ export default class PreProcessor {
     }
 }
 
+const processor = new PreProcessor();
+
 export function process(source: string): string {
-    return new PreProcessor(source).process();
+    return processor.process(source);
 }
