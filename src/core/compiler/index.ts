@@ -1,5 +1,6 @@
 import {
     Expression,
+    Identifier,
     NodeType,
     parse
 } from './parser';
@@ -19,7 +20,7 @@ class DecoratorArguments {
     ) {
         this.expressions = parse(source);
         for (let expression of this.expressions) {
-            let targets: Expression[] = [];
+            let targets: string[][] = [];
             findConstantsAndWatchTargets(expression, targets);
             console.log(targets);
         }
@@ -43,7 +44,7 @@ class DecoratorArguments {
 
 new DecoratorArguments(new Scope(), 'foo.bar.pia, { a: foo(bar, 1) }, foo.bar[hia.pia].yo, foo.bar[0].yo, (1 + foo.bar).xxx[0].yo');
 
-function findConstantsAndWatchTargets(expression: Expression, targets: Expression[], upperWatchable?: boolean): boolean {
+function findConstantsAndWatchTargets(expression: Expression, targets: string[][], upperWatchable?: boolean): boolean {
     let watchable = false;
     switch (expression.type) {
         case NodeType.literal:
@@ -105,7 +106,19 @@ function findConstantsAndWatchTargets(expression: Expression, targets: Expressio
             break;
     }
     if (watchable && !upperWatchable) {
-        targets.push(expression);
+        targets.push(getWatchableExpressionKeys(expression));
     }
     return watchable;
+}
+
+function getWatchableExpressionKeys(expression: Expression): string[] {
+    if (expression.type === NodeType.identifier) {
+        return [expression.name];
+    } else if (expression.type === NodeType.memberExpression) {
+        let keys = getWatchableExpressionKeys(expression.object);
+        keys.push((expression.property as Identifier).name);
+        return keys;
+    } else {
+        throw new Error('IMPOSSIBLE');
+    }
 }
