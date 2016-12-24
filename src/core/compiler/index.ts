@@ -35,12 +35,13 @@ class DecoratorArguments {
 }
 
 // foo.bar.pia -> foo.bar.pia
+// { a: foo(bar, 1) } -> foo, bar
 // foo() -> foo
 // foo.bar[hia.pia].yo -> foo.bar, hia.pia
 // foo.bar[0].yo -> foo.bar
 // (1 + foo.bar).xxx[0].yo -> foo.bar
 
-new DecoratorArguments(new Scope(), 'foo.bar.pia, foo(), foo.bar[hia.pia].yo, foo.bar[0].yo, (1 + foo.bar).xxx[0].yo');
+new DecoratorArguments(new Scope(), 'foo.bar.pia, { a: foo(bar, 1) }, foo.bar[hia.pia].yo, foo.bar[0].yo, (1 + foo.bar).xxx[0].yo');
 
 function findConstantsAndWatchTargets(expression: Expression, targets: Expression[], upperWatchable?: boolean): boolean {
     let watchable = false;
