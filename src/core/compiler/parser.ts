@@ -1,10 +1,6 @@
 import { Token, TokenType, tokenize } from './tokenizer';
 
 export const enum NodeType {
-    program,
-    expressionStatement,
-    expression,
-    assignmentExpression,
     identifier,
     literal,
     memberExpression,
@@ -20,23 +16,8 @@ export const enum NodeType {
 
 export interface NodeBase {
     type: NodeType;
-}
-
-export interface Program extends NodeBase {
-    type: NodeType.program;
-    body: ExpressionStatement[];
-}
-
-export interface ExpressionStatement extends NodeBase {
-    type: NodeType.expressionStatement;
-    expression: Expression;
-}
-
-export interface AssignmentExpression extends NodeBase {
-    type: NodeType.assignmentExpression;
-    left: Identifier | MemberExpression;
-    right: Expression;
-    operator: string;
+    constant?: boolean;
+    value?: any;
 }
 
 export interface Identifier extends NodeBase {
@@ -109,7 +90,6 @@ export interface CallExpression extends NodeBase {
 }
 
 export type Expression =
-    AssignmentExpression |
     MemberExpression |
     CallExpression |
     ArrayExpression |
@@ -120,10 +100,6 @@ export type Expression =
     ConditionalExpression |
     Identifier |
     Literal;
-
-export type Node =
-    ExpressionStatement |
-    Expression;
 
 const hasOwnProperty = Object.prototype.hasOwnProperty;
 
@@ -139,10 +115,10 @@ const LITERALS_MAP: {
 class Parser {
     private tokens: Token[];
 
-    parse(source: string): Program {
+    parse(source: string): Expression[] {
         this.tokens = tokenize(source);
 
-        let program = this.program();
+        let args = this.decoratorArguments();
 
         if (this.tokens.length) {
             throw this.error(`Unexpected token "${this.tokens[0].text}"`);
@@ -150,31 +126,19 @@ class Parser {
 
         this.tokens = undefined!;
 
-        return program;
+        return args;
     }
 
-    private program(): Program {
-        let body: ExpressionStatement[] = [];
+    private decoratorArguments(): Expression[] {
+        let args: Expression[] = [];
 
-        while (true) {
-            if (this.tokens.length && !this.peek('}', ')', ';', ']')) {
-                body.push(this.expressionStatement());
-            }
-
-            if (!this.expect(';')) {
-                return {
-                    type: NodeType.program,
-                    body
-                };
-            }
+        if (this.tokens.length) {
+            do {
+                args.push(this.filterChain());
+            } while (this.expect(','));
         }
-    }
 
-    private expressionStatement(): ExpressionStatement {
-        return {
-            type: NodeType.expressionStatement,
-            expression: this.filterChain()
-        };
+        return args;
     }
 
     private filterChain() {
@@ -188,26 +152,7 @@ class Parser {
     }
 
     private expression() {
-        return this.assignment();
-    }
-
-    private assignment(): Expression {
-        let result = this.ternary();
-
-        if (this.expect('=')) {
-            if (!Parser.isAssignable(result)) {
-                throw this.error('Trying to assign a value to a non l-value');
-            }
-
-            result = {
-                type: NodeType.assignmentExpression,
-                left: result,
-                right: this.assignment(),
-                operator: '='
-            } as AssignmentExpression;
-        }
-
-        return result;
+        return this.ternary();
     }
 
     private ternary(): Expression {
@@ -370,7 +315,7 @@ class Parser {
                 primary = {
                     type: NodeType.callExpression,
                     callee: primary,
-                    arguments: this.parseArguments()
+                    arguments: this.callArguments()
                 } as CallExpression;
                 this.consume(')');
             } else if (next.text === '[') {
@@ -406,14 +351,15 @@ class Parser {
             filter: true
         };
 
-        while (this.expect(':')) {
-            args.push(this.expression());
+        if (this.expect('(')) {
+            args.push(...this.callArguments());
+            this.consume(')');
         }
 
         return result;
     }
 
-    private parseArguments(): Expression[] {
+    private callArguments(): Expression[] {
         let args: Expression[] = [];
 
         if (this.peekToken().text !== ')') {
@@ -566,13 +512,13 @@ class Parser {
         return new SyntaxError(message);
     }
 
-    private static isAssignable(node: Node): node is Identifier | MemberExpression {
+    private static isAssignable(node: Expression): node is Identifier | MemberExpression {
         return node.type === NodeType.identifier || node.type === NodeType.memberExpression;
     }
 }
 
 const parser = new Parser();
 
-export function parse(source: string): Program {
+export function parse(source: string): Expression[] {
     return parser.parse(source);
 }
