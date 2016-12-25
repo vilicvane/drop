@@ -28,6 +28,14 @@ describe('compiler', () => {
                 .should.equal('<dp:decorator name="test" type="processor">{foo}</dp:decorator>\n<div></div>');
             process('[test [foo + "]"]]\n<div></div>')
                 .should.equal('<dp:decorator name="test" type="processor">[foo + "]"]</dp:decorator>\n<div></div>');
+            process('[test:foo bar]\n<div></div>')
+                .should.equal('<dp:decorator name="test" type="processor" label="foo">bar</dp:decorator>\n<div></div>');
+            process('[test=foo bar]\n<div></div>')
+                .should.equal('<dp:decorator name="test" type="processor" model="foo">bar</dp:decorator>\n<div></div>');
+            process('[test=foo.pia bar]\n<div></div>')
+                .should.equal('<dp:decorator name="test" type="processor" model="foo.pia">bar</dp:decorator>\n<div></div>');
+            process('[test:yo=foo.pia bar]\n<div></div>')
+                .should.equal('<dp:decorator name="test" type="processor" label="yo" model="foo.pia">bar</dp:decorator>\n<div></div>');
             process.bind(undefined, '[test [foo + "]"\n<div></div>')
                 .should.throw('Unexpected end of source');
         });

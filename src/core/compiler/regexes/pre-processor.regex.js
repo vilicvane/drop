@@ -8,15 +8,51 @@ const {
 // PRE_START_REGEX
 
 const escapedChar = /\\($escaped:[^])/;
-const decoratorTypeMarker = /($type:[#@+]?)/;
+const decoratorStartChar = /\[/;
+const typeMarker = /($type:[#@+]?)/;
+
+const name = {
+    name: 'name',
+    regexes: identifier
+};
+
+const label = {
+    regexes: [
+        /:/,
+        {
+            name: 'label',
+            regexes: identifier
+        }
+    ],
+    repeat: '?'
+};
+
+const model = {
+    regexes: [
+        /=/,
+        {
+            name: 'model',
+            regexes: [
+                identifier,
+                {
+                    regexes: [
+                        /\./,
+                        identifier
+                    ],
+                    repeat: '*'
+                }
+            ]
+        }
+    ],
+    repeat: '?'
+};
 
 const decoratorStart = [
-    /\[/,
-    decoratorTypeMarker,
-    {
-        name: 'identifier',
-        regexes: identifier
-    }
+    decoratorStartChar,
+    typeMarker,
+    name,
+    label,
+    model
 ];
 
 const templateStart = /\{($raw:=)?/;

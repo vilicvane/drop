@@ -1,11 +1,13 @@
-const PRE_START_REGEX = /* /$preStart/ */ /\\([^])|\[([#@+]?)([a-zA-Z$_][0-9a-zA-Z$_]*)|\{(=)?/g;
+const PRE_START_REGEX = /* /$preStart/ */ /\\([^])|\[([#@+]?)([a-zA-Z$_][0-9a-zA-Z$_]*)(?::([a-zA-Z$_][0-9a-zA-Z$_]*))?(?:=([a-zA-Z$_][0-9a-zA-Z$_]*(?:\.[a-zA-Z$_][0-9a-zA-Z$_]*)*))?|\{(=)?/g;
 const PRE_TOKEN_REGEX = /* /$preToken/ */ /(["'])(?:(?!\1|[\\\r\n\u2028\u2029])[\s\S]|\\(?:['"\\bfnrtv]|[^'"\\bfnrtv\dxu\r\n\u2028\u2029]|0(?!\d)|x[\da-fA-F]{2}|u[\da-fA-F]{4})|\\(?:\r?\n|\r(?!\n)|[\u2028\u2029]))*(?:\1|())|([([{])|([)\]}])|[^]/g;
 
 /* /$preStart/ */
 const enum PreStartCapture {
     escaped = 1,
     type,
-    identifier,
+    name,
+    label,
+    model,
     raw
 }
 
@@ -50,17 +52,34 @@ class PreProcessor {
                 continue;
             }
 
-            let identifier = captures[PreStartCapture.identifier];
+            let name = captures[PreStartCapture.name];
 
-            if (identifier) {
+            if (name) {
+                let attributesStr = `name="${name}"`;
+
                 switch (captures[PreStartCapture.type]) {
                     case '#':
-                        this.output += `<dp:decorator name="${identifier}" type="modifier">`;
+                        attributesStr += ' type="modifier"';
                         break;
                     case '':
-                        this.output += `<dp:decorator name="${identifier}" type="processor">`;
+                        attributesStr += ' type="processor"';
                         break;
+                    default:
+                        throw this.error(`Decorator type "${captures[PreStartCapture.type]}" has not been supported yet`);
                 }
+
+                let label = captures[PreStartCapture.label];
+                let model = captures[PreStartCapture.model];
+
+                if (label) {
+                    attributesStr += ` label="${label}"`;
+                }
+
+                if (model) {
+                    attributesStr += ` model="${model}"`;
+                }
+
+                this.output += `<dp:decorator ${attributesStr}>`;
 
                 this.pushStack(']');
                 this.readTokens();
