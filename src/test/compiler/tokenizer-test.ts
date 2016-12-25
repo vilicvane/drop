@@ -77,6 +77,8 @@ describe('compiler', () => {
                     end: 5
                 }
             ]);
+
+            tokenize.bind(undefined, '123abc').should.throw('Unexpected token "123abc"');
         });
 
         it('should tokenize source with string literals', () => {

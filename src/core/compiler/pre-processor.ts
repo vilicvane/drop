@@ -64,6 +64,7 @@ class PreProcessor {
                     case '':
                         attributesStr += ' type="processor"';
                         break;
+                    /* istanbul ignore next */
                     default:
                         throw this.error(`Decorator type "${captures[PreStartCapture.type]}" has not been supported yet`);
                 }
