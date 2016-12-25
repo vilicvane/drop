@@ -18,6 +18,8 @@ describe('compiler', () => {
         it('should process source with processor', () => {
             process('[test]\n<div></div>')
                 .should.equal('<dp:decorator name="test" type="processor"></dp:decorator>\n<div></div>');
+            process('[foo-bar yo]\n<div></div>')
+                .should.equal('<dp:decorator name="foo-bar" type="processor">yo</dp:decorator>\n<div></div>');
             process('[test foo]\n<div></div>')
                 .should.equal('<dp:decorator name="test" type="processor">foo</dp:decorator>\n<div></div>');
             process('[test (foo)]\n<div></div>')

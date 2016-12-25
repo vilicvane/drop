@@ -13,7 +13,7 @@ const typeMarker = /($type:[#@+]?)/;
 
 const name = {
     name: 'name',
-    regexes: identifier
+    regexes: /[0-9a-zA-Z$_-]+/
 };
 
 const label = {
